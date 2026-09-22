@@ -1,6 +1,6 @@
 """
 "Files" tab: hierarchical view of the APK's internal zip entries, with a
-live text filter.
+live text filter and column-header sorting.
 """
 import os
 import tkinter as tk
@@ -8,15 +8,33 @@ from tkinter import ttk
 
 from config import COLOR_FOLDER_BG, FONT_MONO_SMALL
 from core import FileTreeFilter
+from ui.widgets.tree_sorter import FileTreeSorter
 from utils.size_formatter import HumanReadableSizeFormatter, SizeFormatter
 from utils.ui_helpers import AutoHideScrollbar
 
+_COLUMN_LABELS = {
+    "#0": "Name",
+    "type": "Type",
+    "size": "Size",
+    "compressed": "Compressed",
+    "modified": "Modified",
+}
+ARROW_UP = "⏶"
+ARROW_DOWN = "⏷"
+
 
 class FilesPanel(ttk.Frame):
-    def __init__(self, parent, tree_filter: FileTreeFilter = None, size_formatter: SizeFormatter = None):
+    def __init__(
+        self,
+        parent,
+        tree_filter: FileTreeFilter = None,
+        size_formatter: SizeFormatter = None,
+        sorter: FileTreeSorter = None,
+    ):
         super().__init__(parent)
         self._tree_filter = tree_filter or FileTreeFilter()
         self._size_formatter = size_formatter or HumanReadableSizeFormatter()
+        self._sorter = sorter or FileTreeSorter()
         self._tree_data = {}
 
         self.rowconfigure(0, weight=1)
@@ -26,21 +44,24 @@ class FilesPanel(ttk.Frame):
 
         self._build_treeview()
         self._build_filter_bar()
+        self._update_heading_labels()
 
     def _build_treeview(self):
+        # Give the header row some breathing room; by default ttk crams the
+        # heading text (and our sort arrow) right against the cell edges.
+        ttk.Style().configure("Treeview.Heading", padding=(8, 6))
+
         columns = ("type", "size", "compressed", "modified")
         self.tree = ttk.Treeview(self, columns=columns, show="tree headings")
 
-        self.tree.heading("#0", text="Name", anchor="w")
         self.tree.column("#0", width=380, minwidth=200, stretch=True, anchor="w")
-        self.tree.heading("type", text="Type", anchor="w")
         self.tree.column("type", width=120, minwidth=80, stretch=False, anchor="w")
-        self.tree.heading("size", text="Size", anchor="w")
         self.tree.column("size", width=100, minwidth=70, stretch=False, anchor="w")
-        self.tree.heading("compressed", text="Compressed", anchor="w")
-        self.tree.column("compressed", width=100, minwidth=70, stretch=False, anchor="w")
-        self.tree.heading("modified", text="Modified", anchor="w")
+        self.tree.column("compressed", width=120, minwidth=100, stretch=False, anchor="w")
         self.tree.column("modified", width=150, minwidth=130, stretch=False, anchor="w")
+
+        for column in _COLUMN_LABELS:
+            self.tree.heading(column, anchor="w", command=lambda c=column: self._sort_by(c))
 
         v_scroll = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         h_scroll = ttk.Scrollbar(self, orient="horizontal", command=self.tree.xview)
@@ -74,6 +95,22 @@ class FilesPanel(ttk.Frame):
         self.tree.delete(*self.tree.get_children())
         self._tree_data = {}
 
+    # --- Sorting ---------------------------------------------------------
+
+    def _sort_by(self, column: str):
+        self._sorter.toggle(column)
+        self._update_heading_labels()
+        self._apply_filter()
+
+    def _update_heading_labels(self):
+        # A couple of spaces (rather than one) keep the arrow from looking
+        # cramped against the label, especially combined with the header
+        # padding configured in _build_treeview.
+        arrow = f"  {ARROW_UP}" if self._sorter.reverse else f"  {ARROW_DOWN}"
+        for column, label in _COLUMN_LABELS.items():
+            text = label + (arrow if column == self._sorter.column else "")
+            self.tree.heading(column, text=text)
+
     # --- Filtering / rendering ----------------------------------------------
 
     def _apply_filter(self):
@@ -82,7 +119,7 @@ class FilesPanel(ttk.Frame):
         self._populate(self._tree_filter.filter(self._tree_data, query))
 
     def _populate(self, node_dict: dict, parent_iid: str = ""):
-        entries = sorted(node_dict.items(), key=lambda kv: (kv[1].get("__is_file__", False), kv[0].lower()))
+        entries = self._sorter.sorted_entries(node_dict)
 
         for name, meta in entries:
             size_str = self._size_formatter.format(meta.get("__size__", 0))
@@ -93,14 +130,14 @@ class FilesPanel(ttk.Frame):
                 ext = os.path.splitext(name)[1].lstrip(".").upper()
                 type_label = f"{ext} File" if ext else "File"
                 self.tree.insert(
-                    parent_iid, tk.END, text=f" 📄 {name}",
+                    parent_iid, tk.END, text=f" \U0001F4C4 {name}",
                     values=(type_label, size_str, compressed_str, modified_str),
                     tags=("file",),
                 )
             else:
                 child_count = len(meta.get("__children__", {}))
                 iid = self.tree.insert(
-                    parent_iid, tk.END, text=f" 📁 {name}",
+                    parent_iid, tk.END, text=f" \U0001F4C1 {name}",
                     values=(f"Directory ({child_count})", size_str, compressed_str, modified_str),
                     open=True, tags=("folder",),
                 )
