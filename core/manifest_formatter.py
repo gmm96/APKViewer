@@ -35,7 +35,6 @@ class ManifestFormatter:
         self._serializer = serializer or default_xml_serializer()
 
     def format(self, apk) -> str:
-        """Return the AndroidManifest.xml of `apk` as pretty-printed XML text."""
         try:
             xml_root = apk.get_android_manifest_xml()
             if xml_root is None:

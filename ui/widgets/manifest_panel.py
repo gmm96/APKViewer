@@ -1,5 +1,5 @@
 """
-"Manifest.xml" tab: read-only text view with XML syntax highlighting.
+"Manifest" tab: read-only text view with XML syntax highlighting.
 """
 import tkinter as tk
 from tkinter import ttk

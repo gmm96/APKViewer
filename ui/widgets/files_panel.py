@@ -1,7 +1,3 @@
-"""
-"Files" tab: hierarchical view of the APK's internal zip entries, with a
-live text filter and column-header sorting.
-"""
 import os
 import tkinter as tk
 from tkinter import ttk
@@ -36,6 +32,8 @@ class FilesPanel(ttk.Frame):
         self._size_formatter = size_formatter or HumanReadableSizeFormatter()
         self._sorter = sorter or FileTreeSorter()
         self._tree_data = {}
+        
+        self._node_states = {}
 
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=0)
@@ -47,8 +45,6 @@ class FilesPanel(ttk.Frame):
         self._update_heading_labels()
 
     def _build_treeview(self):
-        # Give the header row some breathing room; by default ttk crams the
-        # heading text (and our sort arrow) right against the cell edges.
         ttk.Style().configure("Treeview.Heading", padding=(8, 6))
 
         columns = ("type", "size", "compressed", "modified")
@@ -87,6 +83,7 @@ class FilesPanel(ttk.Frame):
 
     def set_tree(self, tree_data: dict):
         self._tree_data = tree_data
+        self._node_states.clear()
         self.filter_entry.delete(0, tk.END)
         self.tree.delete(*self.tree.get_children())
         self._populate(self._tree_data)
@@ -94,6 +91,7 @@ class FilesPanel(ttk.Frame):
     def clear(self):
         self.tree.delete(*self.tree.get_children())
         self._tree_data = {}
+        self._node_states.clear()
 
     # --- Sorting ---------------------------------------------------------
 
@@ -103,9 +101,6 @@ class FilesPanel(ttk.Frame):
         self._apply_filter()
 
     def _update_heading_labels(self):
-        # A couple of spaces (rather than one) keep the arrow from looking
-        # cramped against the label, especially combined with the header
-        # padding configured in _build_treeview.
         arrow = f"  {ARROW_UP}" if self._sorter.reverse else f"  {ARROW_DOWN}"
         for column, label in _COLUMN_LABELS.items():
             text = label + (arrow if column == self._sorter.column else "")
@@ -113,8 +108,14 @@ class FilesPanel(ttk.Frame):
 
     # --- Filtering / rendering ----------------------------------------------
 
+    def _save_tree_state(self, parent_iid=""):
+        for child_iid in self.tree.get_children(parent_iid):
+            self._node_states[child_iid] = self.tree.item(child_iid, "open")
+            self._save_tree_state(child_iid)
+
     def _apply_filter(self):
         query = self.filter_entry.get()
+        self._save_tree_state()
         self.tree.delete(*self.tree.get_children())
         self._populate(self._tree_filter.filter(self._tree_data, query))
 
@@ -122,6 +123,8 @@ class FilesPanel(ttk.Frame):
         entries = self._sorter.sorted_entries(node_dict)
 
         for name, meta in entries:
+            iid = f"{parent_iid}/{name}" if parent_iid else name
+            
             size_str = self._size_formatter.format(meta.get("__size__", 0))
             compressed_str = self._size_formatter.format(meta.get("__compressed__", 0))
             modified_str = meta.get("__modified__", "")
@@ -130,15 +133,20 @@ class FilesPanel(ttk.Frame):
                 ext = os.path.splitext(name)[1].lstrip(".").upper()
                 type_label = f"{ext} File" if ext else "File"
                 self.tree.insert(
-                    parent_iid, tk.END, text=f" \U0001F4C4 {name}",
+                    parent_iid, tk.END, iid=iid, text=f" \U0001F4C4 {name}",
                     values=(type_label, size_str, compressed_str, modified_str),
                     tags=("file",),
                 )
             else:
                 child_count = len(meta.get("__children__", {}))
-                iid = self.tree.insert(
-                    parent_iid, tk.END, text=f" \U0001F4C1 {name}",
+                is_open = self._node_states.get(iid, True)
+                self.tree.insert(
+                    parent_iid,
+                    tk.END,
+                    iid=iid,
+                    text=f" \U0001F4C1 {name}",
                     values=(f"Directory ({child_count})", size_str, compressed_str, modified_str),
-                    open=True, tags=("folder",),
+                    open=is_open,
+                    tags=("folder",),
                 )
                 self._populate(meta.get("__children__", {}), iid)

@@ -22,10 +22,10 @@ COLOR_MARK_BG = "#cfe3fc"
 COLOR_FOLDER_BG = "#eef3f8"
 
 # XML syntax highlight colors
-COLOR_XML_TAG = "#800000"
-COLOR_XML_ATTR = "#FF0000"
-COLOR_XML_VALUE = "#0000FF"
-COLOR_XML_COMMENT = "#008000"
+COLOR_XML_TAG = "#0033B3"
+COLOR_XML_ATTR = "#871094"
+COLOR_XML_VALUE = "#067D17"
+COLOR_XML_COMMENT = "#8C8C8C"
 
 # Tag name shared between the line-marker and the copy context menu
 MARKED_LINE_TAG = "marked_line"

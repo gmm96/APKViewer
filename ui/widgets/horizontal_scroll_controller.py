@@ -1,5 +1,5 @@
 """
-Decides whether the Manifest.xml view needs a horizontal scrollbar.
+Decides whether the Manifest view needs a horizontal scrollbar.
 
 Tk's Text widget only accounts for lines it has actually laid out (i.e.
 scrolled into view at least once) when computing its horizontal scroll

@@ -63,7 +63,7 @@ class ApkAnalyzerApp:
         notebook.add(self.info_panel, text="Information")
 
         self.manifest_panel = ManifestPanel(notebook, self.context_menu)
-        notebook.add(self.manifest_panel, text="Manifest.xml")
+        notebook.add(self.manifest_panel, text="Manifest")
 
         self.files_panel = FilesPanel(notebook)
         notebook.add(self.files_panel, text="Files")
