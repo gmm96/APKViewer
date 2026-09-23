@@ -4,7 +4,9 @@ from tkinter import ttk
 
 from config import COLOR_FOLDER_BG, FONT_MONO_SMALL
 from core import FileTreeFilter
+from core.apk_extractor import ApkExtractor
 from ui.widgets.tree_sorter import FileTreeSorter
+from ui.widgets.files_context_menu import FilesContextMenu
 from utils.size_formatter import HumanReadableSizeFormatter, SizeFormatter
 from utils.ui_helpers import AutoHideScrollbar
 
@@ -34,6 +36,8 @@ class FilesPanel(ttk.Frame):
         self._tree_data = {}
         
         self._node_states = {}
+        self.apk_path = None
+        self._extractor = ApkExtractor()
 
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=0)
@@ -43,6 +47,8 @@ class FilesPanel(ttk.Frame):
         self._build_treeview()
         self._build_filter_bar()
         self._update_heading_labels()
+        
+        self._context_menu = FilesContextMenu(self.tree, self._extractor, lambda: self.apk_path)
 
     def _build_treeview(self):
         ttk.Style().configure("Treeview.Heading", padding=(8, 6))
@@ -79,9 +85,8 @@ class FilesPanel(ttk.Frame):
         self.filter_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         self.filter_entry.bind("<KeyRelease>", lambda e: self._apply_filter())
 
-    # --- Public API -------------------------------------------------------
-
-    def set_tree(self, tree_data: dict):
+    def render(self, apk_path: str, tree_data: dict):
+        self.apk_path = apk_path
         self._tree_data = tree_data
         self._node_states.clear()
         self.filter_entry.delete(0, tk.END)
@@ -89,11 +94,10 @@ class FilesPanel(ttk.Frame):
         self._populate(self._tree_data)
 
     def clear(self):
+        self.apk_path = None
         self.tree.delete(*self.tree.get_children())
         self._tree_data = {}
         self._node_states.clear()
-
-    # --- Sorting ---------------------------------------------------------
 
     def _sort_by(self, column: str):
         self._sorter.toggle(column)
@@ -105,8 +109,6 @@ class FilesPanel(ttk.Frame):
         for column, label in _COLUMN_LABELS.items():
             text = label + (arrow if column == self._sorter.column else "")
             self.tree.heading(column, text=text)
-
-    # --- Filtering / rendering ----------------------------------------------
 
     def _save_tree_state(self, parent_iid=""):
         for child_iid in self.tree.get_children(parent_iid):

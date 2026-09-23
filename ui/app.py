@@ -101,7 +101,7 @@ class ApkAnalyzerApp:
             manifest_xml = self._manifest_formatter.format(result.apk)
             file_tree = self._file_tree_builder.build(apk_path)
 
-            self.root.after(0, lambda: self._render_result(result, manifest_xml, file_tree))
+            self.root.after(0, lambda: self._render_result(apk_path, result, manifest_xml, file_tree))
             self._set_status("Analysis completed successfully.", "green")
         except Exception as exc:
             self.root.after(
@@ -117,7 +117,7 @@ class ApkAnalyzerApp:
     def _set_status(self, message: str, color: str = "gray"):
         self.root.after(0, lambda: self.status_bar.set_status(message, color))
 
-    def _render_result(self, result: AnalysisResult, manifest_xml: str, file_tree: dict):
+    def _render_result(self, apk_path: str, result: AnalysisResult, manifest_xml: str, file_tree: dict):
         app_info = result.sections.get("App Information", {})
         self.header.show_result(
             app_name=app_info.get("App name"),
@@ -126,4 +126,4 @@ class ApkAnalyzerApp:
         )
         self.info_panel.render(result.sections)
         self.manifest_panel.render(manifest_xml)
-        self.files_panel.set_tree(file_tree)
+        self.files_panel.render(apk_path, file_tree)
