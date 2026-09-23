@@ -20,16 +20,26 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install -y upx
           python -m pip install --upgrade pip
-          pip install androguard pillow lxml frida pyinstaller
+          pip install -r requirements.txt
+          pip install pyinstaller
 
       - name: Build executable with PyInstaller
         run: |
-          pyinstaller --onefile --noconsole --collect-all androguard --collect-all PIL --hidden-import=PIL._tkinter_finder apk-viewer.py
+          pyinstaller --onefile \
+              --noconsole \
+              --name APKViewer
+              --collect-all androguard \
+              --collect-all PIL \
+              --hidden-import=PIL._tkinter_finder \
+              main.py
+          upx --best --lzma dist/APKViewer
 
       - name: Upload binary to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/apk-viewer
+          files: dist/APKViewer
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
