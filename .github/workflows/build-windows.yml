@@ -28,7 +28,6 @@ jobs:
 
       - name: Build executable with Nuitka
         run: |
-          run: |
           python -m nuitka `
               --standalone `
               --onefile `
@@ -48,3 +47,4 @@ jobs:
           files: dist/APKViewer.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
