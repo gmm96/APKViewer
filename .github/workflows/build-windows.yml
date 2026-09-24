@@ -28,14 +28,16 @@ jobs:
 
       - name: Build executable with Nuitka
         run: |
+          run: |
           python -m nuitka `
               --standalone `
               --onefile `
+              --assume-yes-for-downloads `
               --windows-console-mode=disable `
+              --include-data-dir=assets=assets `
               --output-dir=dist `
               --output-filename=APKViewer.exe `
               --enable-plugin=tk-inter `
-              --enable-plugin=anti-bloat `
               --nofollow-import-to=frida `
               --lto=yes `
               main.py
