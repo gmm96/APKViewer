@@ -1,4 +1,4 @@
-name: Build APKViewer for Windows
+name: '[Windows] Build APKViewer'
 
 on:
   push:
@@ -12,39 +12,38 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout code
+      - name: 'Checkout code'
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: 'Set up Python'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install Python dependencies
+      - name: 'Install Python dependencies'
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install nuitka zstandard
+          & "$env:pythonLocation\python.exe" -m pip install --upgrade pip
+          & "$env:pythonLocation\python.exe" -m pip install -r requirements.txt
+          & "$env:pythonLocation\python.exe" -m pip install nuitka zstandard
 
-      - name: Build executable with Nuitka
+      - name: 'Build executable with Nuitka'
         run: |
-          python -m nuitka `
+          & "$env:pythonLocation\python.exe" -m nuitka `
               --standalone `
               --onefile `
               --assume-yes-for-downloads `
-              --windows-console-mode=disable `
-              --include-data-dir=assets=assets `
               --output-dir=dist `
               --output-filename=APKViewer.exe `
+              --windows-console-mode=disable `
+              --include-data-dir=assets=assets `
               --enable-plugin=tk-inter `
               --nofollow-import-to=frida `
               --lto=yes `
               main.py
 
-      - name: Upload binary to Release
+      - name: 'Upload binary to release'
         uses: softprops/action-gh-release@v2
         with:
           files: dist/APKViewer.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
