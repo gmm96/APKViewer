@@ -26,13 +26,13 @@ jobs:
 
       - name: 'Install Python dependencies'
         run: |
-          python3.11 -m pip install --upgrade pip
-          python3.11 -m pip install -r requirements.txt
-          python3.11 -m pip install nuitka zstandard
+          "$pythonLocation/bin/python" -m pip install --upgrade pip
+          "$pythonLocation/bin/python" -m pip install -r requirements.txt
+          "$pythonLocation/bin/python" -m pip install nuitka zstandard
 
       - name: 'Build executable with Nuitka'
         run: |
-          python3.11 -m nuitka \
+          "$pythonLocation/bin/python" -m nuitka \
               --standalone \
               --onefile \
               --output-dir=dist \
