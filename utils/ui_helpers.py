@@ -50,10 +50,20 @@ class AutoHideScrollbar:
         self._scrollbar.set(first, last)
 
 
-def get_asset_path(relative_path):
-    if '__compiled__' in globals():
-        base_path = os.path.dirname(sys.executable)
-    else:
-        base_path = os.path.abspath(".")
-        
-    return os.path.join(base_path, relative_path)
+class AssetPathResolver:
+    """
+    Resolves a path relative to the app's bundled assets (icons, etc.),
+    working both when run from source and when frozen into a single
+    compiled executable.
+
+    Kept as its own small class - rather than a bare module-level function
+    - so it can be constructor-injected and swapped out in tests, the same
+    way `SizeFormatter` or `IconExtractor`'s DPI table are.
+    """
+
+    def resolve(self, relative_path: str) -> str:
+        if "__compiled__" in globals():
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.abspath(".")
+        return os.path.join(base_path, relative_path)

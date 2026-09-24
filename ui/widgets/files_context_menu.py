@@ -1,11 +1,16 @@
 """
-Context menu for the Files panel tree. Handles extracting files, native OS 
-integrations (Open With, Clipboard), and strict focus management.
+Context menu for the Files panel tree. Handles extracting files and
+wiring the resulting Open / Open with / Copy / Extract to / Details
+commands to their (injected) collaborators, plus strict focus management
+for the popup menu itself.
+
+OS integration (actually launching a file / showing a native "Open
+with..." picker) and clipboard integration (putting real files on the
+clipboard) are intentionally NOT implemented here - they're injected as
+`OsFileOpener` and `ClipboardFileCopier` strategies, so this class stays
+focused on being a menu.
 """
-import asyncio
 import os
-import subprocess
-import sys
 import tempfile
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -13,9 +18,10 @@ from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk
 
 from core.apk_extractor import ApkExtractor
-from ui.widgets.clipboard_utils import copy_files_to_clipboard
 from ui.widgets.file_details_dialog import FileDetailsDialog
-from utils.ui_helpers import get_asset_path
+from ui.widgets.os_file_opener import OsFileOpener, default_os_file_opener
+from utils.clipboard_service import ClipboardFileCopier, default_clipboard_file_copier
+from utils.ui_helpers import AssetPathResolver
 
 
 class FilesContextMenu:
@@ -23,7 +29,17 @@ class FilesContextMenu:
     # the entries are added in this fixed order.
     _OPEN_WITH_INDEX = 1
 
-    def __init__(self, tree: ttk.Treeview, extractor: ApkExtractor, get_apk_path_cb, size_formatter=None, get_meta_cb=None):
+    def __init__(
+        self,
+        tree: ttk.Treeview,
+        extractor: ApkExtractor,
+        get_apk_path_cb,
+        size_formatter=None,
+        get_meta_cb=None,
+        os_file_opener: OsFileOpener = None,
+        clipboard_copier: ClipboardFileCopier = None,
+        asset_path_resolver: AssetPathResolver = None,
+    ):
         self._tree = tree
         self._extractor = extractor
         self._get_apk_path = get_apk_path_cb
@@ -34,18 +50,20 @@ class FilesContextMenu:
         self._get_meta = get_meta_cb
         self._size_formatter = size_formatter
 
+        self._os_file_opener = os_file_opener or default_os_file_opener()
+        self._clipboard_copier = clipboard_copier or default_clipboard_file_copier()
+        self._asset_path_resolver = asset_path_resolver or AssetPathResolver()
+
         self._temp_dir = tempfile.TemporaryDirectory(prefix="apkviewer_")
 
         self._menu = tk.Menu(tree, tearoff=0)
-        
-        # Carga, coloreo, redimensión y padding de los iconos al vuelo
+
         self._icon_open = self._load_icon("assets/icons/file_open.png")
         self._icon_open_with = self._load_icon("assets/icons/file_open_with.png")
         self._icon_copy = self._load_icon("assets/icons/file_copy.png")
         self._icon_extract = self._load_icon("assets/icons/file_unarchive.png")
         self._icon_info = self._load_icon("assets/icons/file_info.png")
 
-        # Restauramos el {:<40} para ensanchar el menú artificialmente
         self._menu.add_command(label="{:<40}".format("  Open"), command=self._cmd_open, image=self._icon_open, compound=tk.LEFT)
         self._menu.add_command(label="{:<40}".format("  Open with..."), command=self._cmd_open_with, image=self._icon_open_with, compound=tk.LEFT)
         self._menu.add_separator()
@@ -56,35 +74,29 @@ class FilesContextMenu:
 
         self._tree.bind("<Button-3>", self._on_right_click)
         self._tree.bind("<Button-2>", self._on_right_click)
-        
+
         # 1. Close menu when clicking anywhere else inside the app
         self._tree.winfo_toplevel().bind("<Button-1>", lambda e: self._menu.unpost(), add="+")
-        
+
         # 2. Close menu when clicking completely outside the app (losing window focus)
         self._menu.bind("<FocusOut>", lambda e: self._menu.unpost())
 
     def _load_icon(self, relative_path: str, size: tuple = (16, 16), hex_color: str = "#333333", padding_left: int = 8, padding_right: int = 4):
-        """Carga, colorea, redimensiona y añade padding transparente al icono usando Pillow."""
-        path = get_asset_path(relative_path)
-        
-        # 1. Abrir asegurando que tenga canal de transparencia (RGBA)
+        """Loads, tints, resizes and pads an icon with transparent margin using Pillow."""
+        path = self._asset_path_resolver.resolve(relative_path)
+
         img = Image.open(path).convert("RGBA")
-        
-        # 2. Colorear el icono
-        alpha_mask = img.getchannel('A')
+
+        alpha_mask = img.getchannel("A")
         colored_img = Image.new("RGBA", img.size, color=hex_color)
         colored_img.putalpha(alpha_mask)
-        
-        # 3. Redimensionar
+
         colored_img = colored_img.resize(size, Image.Resampling.LANCZOS)
-        
-        # 4. TRUCO DE PADDING: Crear un lienzo transparente más ancho
+
         canvas_width = padding_left + size[0] + padding_right
         canvas = Image.new("RGBA", (canvas_width, size[1]), (0, 0, 0, 0))
-        
-        # 5. Pegar el icono desplazado hacia la derecha (creando el padding izquierdo)
         canvas.paste(colored_img, (padding_left, 0))
-        
+
         return ImageTk.PhotoImage(canvas)
 
     def _on_right_click(self, event):
@@ -97,7 +109,7 @@ class FilesContextMenu:
 
             # Unpost any ghost menus first
             self._menu.unpost()
-            
+
             # Post manually and force focus to enable <FocusOut> detection
             self._menu.post(event.x_root, event.y_root)
             self._menu.focus_set()
@@ -151,7 +163,7 @@ class FilesContextMenu:
 
         try:
             for target in self._extract_and_resolve(paths):
-                self._os_open(target)
+                self._os_file_opener.open(target)
         except Exception as e:
             messagebox.showerror("Open failed", str(e), parent=self._tree)
 
@@ -171,119 +183,10 @@ class FilesContextMenu:
         # on one file at a time and immediately launch the chosen app, so a
         # multi-file selection shows one picker per file in turn.
         for target in targets:
-            self._os_open_with(target)
-
-    def _os_open_with(self, abs_path: str):
-        try:
-            if sys.platform == "win32":
-                self._open_with_windows(abs_path)
-            elif sys.platform.startswith("linux"):
-                self._open_with_linux_portal(abs_path)
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", "-R", abs_path])
-            else:
-                raise RuntimeError(
-                    f"Open With is not supported on platform: {sys.platform}"
-                )
-        except Exception as e:
-            messagebox.showerror(
-                "Error",
-                f"Failed to launch OS Open With dialog:\n{e}",
-                parent=self._tree
-            )
-
-    def _open_with_windows(self, abs_path: str):
-        import ctypes
-        from ctypes import wintypes
-
-        class OPENASINFO(ctypes.Structure):
-            _fields_ = [
-                ("pcszFile", wintypes.LPCWSTR),
-                ("pcszClass", wintypes.LPCWSTR),
-                ("oaifInFlags", wintypes.DWORD),
-            ]
-
-        OAIF_EXEC = 0x00000004
-        OAIF_HIDE_REGISTRATION = 0x00000020
-
-        info = OPENASINFO(
-            abs_path,
-            None,
-            OAIF_EXEC | OAIF_HIDE_REGISTRATION,
-        )
-
-        shell32 = ctypes.WinDLL("shell32", use_last_error=True)
-
-        shell32.SHOpenWithDialog.argtypes = [
-            wintypes.HWND,
-            ctypes.POINTER(OPENASINFO),
-        ]
-        shell32.SHOpenWithDialog.restype = wintypes.HRESULT
-
-        hr = shell32.SHOpenWithDialog(
-            None,
-            ctypes.byref(info),
-        )
-
-        if hr != 0:
-            raise OSError(
-                f"SHOpenWithDialog failed with HRESULT 0x{hr & 0xffffffff:08X}"
-            )
-
-    def _open_with_linux_portal(self, abs_path: str):
-        asyncio.run(self._open_with_linux_portal_async(abs_path))
-
-    async def _open_with_linux_portal_async(self, abs_path: str):
-        try:
-            from dbus_next import Message, MessageType, Variant
-            from dbus_next.aio import MessageBus
-        except ImportError as e:
-            raise RuntimeError(
-                "The Python package 'dbus-next' is required for "
-                "Open With on Linux."
-            ) from e
-
-        fd = os.open(abs_path, os.O_RDONLY)
-
-        try:
-            bus = await MessageBus(
-                negotiate_unix_fd=True
-            ).connect()
-
             try:
-                message = Message(
-                    destination="org.freedesktop.portal.Desktop",
-                    path="/org/freedesktop/portal/desktop",
-                    interface="org.freedesktop.portal.OpenURI",
-                    member="OpenFile",
-                    signature="sha{sv}",
-                    body=[
-                        "",
-                        0,
-                        {
-                            "ask": Variant("b", True),
-                        },
-                    ],
-                    unix_fds=[fd],
-                )
-
-                reply = await bus.call(message)
-
-                if reply.message_type == MessageType.ERROR:
-                    raise RuntimeError(
-                        f"{reply.error_name}: "
-                        f"{reply.body[0] if reply.body else ''}"
-                    )
-
-                if reply.message_type != MessageType.METHOD_RETURN:
-                    raise RuntimeError(
-                        f"Unexpected D-Bus reply type: "
-                        f"{reply.message_type}"
-                    )
-            finally:
-                bus.disconnect()
-        finally:
-            os.close(fd)
+                self._os_file_opener.open_with(target)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to launch OS Open With dialog:\n{e}", parent=self._tree)
 
     def _cmd_copy(self):
         self._menu.unpost()
@@ -297,15 +200,15 @@ class FilesContextMenu:
             messagebox.showerror("Copy failed", str(e), parent=self._tree)
             return
 
-        success = copy_files_to_clipboard(targets)
+        success = self._clipboard_copier.copy(targets)
         if not success:
             clipboard_text = "\n".join(targets)
             self._tree.clipboard_clear()
             self._tree.clipboard_append(clipboard_text)
             messagebox.showwarning(
-                "Copy File", 
-                "Native file copy requires xclip/wl-copy on Linux. Paths have been copied as text instead.", 
-                parent=self._tree
+                "Copy File",
+                "Native file copy requires xclip/wl-copy on Linux. Paths have been copied as text instead.",
+                parent=self._tree,
             )
 
     def _cmd_extract(self):
@@ -313,7 +216,7 @@ class FilesContextMenu:
         paths = self._get_selected_paths()
         if not paths:
             return
-            
+
         dest_dir = filedialog.askdirectory(title="Extract to...", parent=self._tree)
         if not dest_dir:
             return
@@ -325,9 +228,9 @@ class FilesContextMenu:
             return
 
         messagebox.showinfo(
-            "Extraction Complete", 
-            f"Successfully extracted {len(extracted)} item(s) to:\n{dest_dir}", 
-            parent=self._tree
+            "Extraction Complete",
+            f"Successfully extracted {len(extracted)} item(s) to:\n{dest_dir}",
+            parent=self._tree,
         )
 
     def _cmd_details(self):
@@ -374,17 +277,3 @@ class FilesContextMenu:
             "total_size": self._size_formatter.format(total_size),
             "total_compressed": self._size_formatter.format(total_compressed),
         }
-
-    # --- OS Integration -------------------------------------------------------
-
-    @staticmethod
-    def _os_open(path: str):
-        try:
-            if sys.platform == "win32":
-                os.startfile(path)
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", path])
-            else:
-                subprocess.Popen(["xdg-open", path])
-        except Exception as e:
-            print(f"Failed to open {path}: {e}")

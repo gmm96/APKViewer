@@ -35,6 +35,7 @@ jobs:
               --output-dir=dist `
               --output-filename=APKViewer.exe `
               --windows-console-mode=disable `
+              --include-package-data=androguard `
               --include-data-dir=assets=assets `
               --enable-plugin=tk-inter `
               --nofollow-import-to=frida `

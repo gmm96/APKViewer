@@ -4,12 +4,15 @@ Popup dialog showing the parsed details of selected file(s) or folder(s).
 import tkinter as tk
 from tkinter import ttk
 
+from ui.widgets.modal_dialog_support import ModalDialogPositioner
+
 
 class FileDetailsDialog:
     """Builds and shows the modal 'Details' popup for files/folders."""
 
-    def __init__(self, parent: tk.Misc):
+    def __init__(self, parent: tk.Misc, positioner: ModalDialogPositioner = None):
         self._parent = parent
+        self._positioner = positioner or ModalDialogPositioner()
 
     def show(self, items_data: list, summary: dict = None) -> None:
         if not items_data:
@@ -31,9 +34,9 @@ class FileDetailsDialog:
         ttk.Button(main_frame, text="Close", command=dialog.destroy).grid(
             row=10, column=0, columnspan=2, pady=(20, 0)
         )
-        
-        self._center_on_parent(dialog)
-        self._focus(dialog)
+
+        self._positioner.center_on_parent(dialog, self._parent)
+        self._positioner.show_as_modal(dialog)
 
     def _build_single_item(self, parent: ttk.Frame, item: dict) -> None:
         fields = {
@@ -76,18 +79,3 @@ class FileDetailsDialog:
             )
             row_idx += 1
         parent.columnconfigure(1, weight=1)
-
-    def _center_on_parent(self, dialog: tk.Toplevel) -> None:
-        dialog.update_idletasks()
-        x = self._parent.winfo_x() + (self._parent.winfo_width() // 2) - (dialog.winfo_width() // 2)
-        y = self._parent.winfo_y() + (self._parent.winfo_height() // 2) - (dialog.winfo_height() // 2)
-        dialog.geometry(f"+{max(x, 0)}+{max(y, 0)}")
-
-    @staticmethod
-    def _focus(dialog: tk.Toplevel) -> None:
-        dialog.deiconify()
-        dialog.lift()
-        dialog.attributes("-topmost", True)
-        dialog.after(150, lambda: dialog.attributes("-topmost", False))
-        dialog.focus_force()
-        dialog.grab_set()

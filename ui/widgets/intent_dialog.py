@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from config import FONT_MONO
+from ui.widgets.modal_dialog_support import ModalDialogPositioner
 
 
 class IntentActionParser:
@@ -39,16 +40,22 @@ class IntentActionParser:
 class IntentDetailsDialog:
     """Builds and shows the modal 'Intent Details' popup on demand."""
 
-    def __init__(self, parent: tk.Misc, parser: IntentActionParser = None):
+    def __init__(
+        self,
+        parent: tk.Misc,
+        parser: IntentActionParser = None,
+        positioner: ModalDialogPositioner = None,
+    ):
         self._parent = parent
         self._parser = parser or IntentActionParser()
+        self._positioner = positioner or ModalDialogPositioner()
 
     def open(self, line_text: str) -> None:
         try:
             fields = self._parser.parse(line_text)
             dialog = self._build_dialog(fields)
-            self._center_on_parent(dialog)
-            self._show(dialog)
+            self._positioner.center_on_parent(dialog, self._parent)
+            self._positioner.show_as_modal(dialog)
         except Exception as exc:
             messagebox.showerror("Parse Error", f"Could not load intent details:\n{exc}")
 
@@ -77,18 +84,3 @@ class IntentDetailsDialog:
             row=row_idx, column=0, columnspan=2, pady=(20, 0)
         )
         return dialog
-
-    def _center_on_parent(self, dialog: tk.Toplevel) -> None:
-        dialog.update_idletasks()
-        x = self._parent.winfo_x() + (self._parent.winfo_width() // 2) - (dialog.winfo_width() // 2)
-        y = self._parent.winfo_y() + (self._parent.winfo_height() // 2) - (dialog.winfo_height() // 2)
-        dialog.geometry(f"+{max(x, 0)}+{max(y, 0)}")
-
-    @staticmethod
-    def _show(dialog: tk.Toplevel) -> None:
-        dialog.deiconify()
-        dialog.lift()
-        dialog.attributes("-topmost", True)
-        dialog.after(150, lambda: dialog.attributes("-topmost", False))
-        dialog.focus_force()
-        dialog.grab_set()
