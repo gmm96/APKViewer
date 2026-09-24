@@ -11,7 +11,7 @@ class FileDetailsDialog:
     def __init__(self, parent: tk.Misc):
         self._parent = parent
 
-    def show(self, items_data: list) -> None:
+    def show(self, items_data: list, summary: dict = None) -> None:
         if not items_data:
             return
 
@@ -26,7 +26,7 @@ class FileDetailsDialog:
         if len(items_data) == 1:
             self._build_single_item(main_frame, items_data[0])
         else:
-            self._build_multi_item(main_frame, items_data)
+            self._build_multi_item(main_frame, items_data, summary)
 
         ttk.Button(main_frame, text="Close", command=dialog.destroy).grid(
             row=10, column=0, columnspan=2, pady=(20, 0)
@@ -45,11 +45,23 @@ class FileDetailsDialog:
         }
         self._render_grid(parent, fields)
 
-    def _build_multi_item(self, parent: ttk.Frame, items: list) -> None:
-        fields = {
-            "Items Selected:": str(len(items)),
-            "Notice:": "Multiple selections shown.\nDetailed metrics are available\nby inspecting items individually.",
-        }
+    def _build_multi_item(self, parent: ttk.Frame, items: list, summary: dict = None) -> None:
+        fields = {"Items Selected:": str(len(items))}
+
+        if summary:
+            # Real totals, computed from the raw byte counts - not the
+            # already-formatted per-row strings, which can't be summed
+            # directly (e.g. "1.5 KB" + "900 B").
+            fields["Files:"] = str(summary.get("file_count", 0))
+            fields["Folders:"] = str(summary.get("folder_count", 0))
+            fields["Total size:"] = summary.get("total_size", "-")
+            fields["Total compressed:"] = summary.get("total_compressed", "-")
+        else:
+            fields["Notice:"] = (
+                "Multiple selections shown.\nDetailed metrics are available\n"
+                "by inspecting items individually."
+            )
+
         self._render_grid(parent, fields)
 
     @staticmethod

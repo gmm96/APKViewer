@@ -1,6 +1,8 @@
 """
 Small reusable Tkinter UI helper classes shared by several widgets.
 """
+import os
+import sys
 import tkinter as tk
 from tkinter import ttk
 
@@ -46,3 +48,12 @@ class AutoHideScrollbar:
         else:
             self._scrollbar.grid(**self._grid_kwargs)
         self._scrollbar.set(first, last)
+
+
+def get_asset_path(relative_path):
+    if '__compiled__' in globals():
+        base_path = os.path.dirname(sys.executable)
+    else:
+        base_path = os.path.abspath(".")
+        
+    return os.path.join(base_path, relative_path)

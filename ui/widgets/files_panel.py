@@ -1,3 +1,8 @@
+"""
+"Files" tab: hierarchical view of the APK's internal zip entries, with a
+live text filter, column-header sorting, and a right-click context menu
+for Open / Open with / Copy / Extract to / Details.
+"""
 import os
 import tkinter as tk
 from tkinter import ttk
@@ -5,8 +10,8 @@ from tkinter import ttk
 from config import COLOR_FOLDER_BG, FONT_MONO_SMALL
 from core import FileTreeFilter
 from core.apk_extractor import ApkExtractor
-from ui.widgets.tree_sorter import FileTreeSorter
 from ui.widgets.files_context_menu import FilesContextMenu
+from ui.widgets.tree_sorter import FileTreeSorter
 from utils.size_formatter import HumanReadableSizeFormatter, SizeFormatter
 from utils.ui_helpers import AutoHideScrollbar
 
@@ -34,7 +39,7 @@ class FilesPanel(ttk.Frame):
         self._size_formatter = size_formatter or HumanReadableSizeFormatter()
         self._sorter = sorter or FileTreeSorter()
         self._tree_data = {}
-        
+
         self._node_states = {}
         self.apk_path = None
         self._extractor = ApkExtractor()
@@ -47,8 +52,14 @@ class FilesPanel(ttk.Frame):
         self._build_treeview()
         self._build_filter_bar()
         self._update_heading_labels()
-        
-        self._context_menu = FilesContextMenu(self.tree, self._extractor, lambda: self.apk_path)
+
+        self._context_menu = FilesContextMenu(
+            self.tree,
+            self._extractor,
+            lambda: self.apk_path,
+            size_formatter=self._size_formatter,
+            get_meta_cb=self._resolve_meta,
+        )
 
     def _build_treeview(self):
         ttk.Style().configure("Treeview.Heading", padding=(8, 6))
@@ -85,10 +96,13 @@ class FilesPanel(ttk.Frame):
         self.filter_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         self.filter_entry.bind("<KeyRelease>", lambda e: self._apply_filter())
 
+    # --- Public API -------------------------------------------------------
+
     def render(self, apk_path: str, tree_data: dict):
         self.apk_path = apk_path
         self._tree_data = tree_data
         self._node_states.clear()
+        self._context_menu.reset_workspace()  # a new APK invalidates any previous extraction
         self.filter_entry.delete(0, tk.END)
         self.tree.delete(*self.tree.get_children())
         self._populate(self._tree_data)
@@ -98,6 +112,26 @@ class FilesPanel(ttk.Frame):
         self.tree.delete(*self.tree.get_children())
         self._tree_data = {}
         self._node_states.clear()
+
+    def cleanup(self):
+        """Releases any temporary files extracted for Open/Open with/Copy. Call on app shutdown."""
+        self._context_menu.reset_workspace()
+
+    def _resolve_meta(self, iid: str) -> dict:
+        """Looks up an item's raw metadata (byte counts, __is_file__, ...)
+        by walking the nested tree dict along `iid`'s path components.
+        Kept as a lookup into the existing tree_data rather than a separate
+        flat cache, so there's only one place that owns this data."""
+        node = self._tree_data
+        meta = None
+        for part in iid.split("/"):
+            meta = node.get(part)
+            if meta is None:
+                return {}
+            node = meta.get("__children__", {})
+        return meta or {}
+
+    # --- Sorting ---------------------------------------------------------
 
     def _sort_by(self, column: str):
         self._sorter.toggle(column)
@@ -109,6 +143,8 @@ class FilesPanel(ttk.Frame):
         for column, label in _COLUMN_LABELS.items():
             text = label + (arrow if column == self._sorter.column else "")
             self.tree.heading(column, text=text)
+
+    # --- Filtering / rendering ----------------------------------------------
 
     def _save_tree_state(self, parent_iid=""):
         for child_iid in self.tree.get_children(parent_iid):
