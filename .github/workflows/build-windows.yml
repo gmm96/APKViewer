@@ -1,4 +1,4 @@
-name: Build Windows APK Viewer
+name: Build APKViewer for Windows
 
 on:
   push:
@@ -8,6 +8,8 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -29,18 +31,36 @@ jobs:
           pyinstaller --onefile `
               --noconsole `
               --name APKViewer `
-              --collect-all androguard `
               --collect-all PIL `
               --hidden-import=PIL._tkinter_finder `
+              --exclude-module frida `
+              --exclude-module IPython `
+              --exclude-module bpython `
+              --exclude-module jupyter `
+              --exclude-module notebook `
+              --exclude-module matplotlib `
+              --exclude-module networkx `
+              --exclude-module numpy `
+              --exclude-module pandas `
+              --exclude-module scipy `
+              --exclude-module pydot `
+              --exclude-module pygments `
+              --exclude-module tornado `
+              --exclude-module PyQt5 `
+              --exclude-module PySide2 `
+              --exclude-module pdb `
+              --exclude-module pydoc `
+              --exclude-module pytest `
+              --exclude-module unittest `
+              --exclude-module tkinter.test `
+              --exclude-module xmlrpc `
               main.py
 
-      - name: Download and Apply UPX (Windows)
+      - name: Download and Apply UPX
         run: |
-          # Descargar UPX oficialmente en Windows de forma automática
           Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-win64.zip" -OutFile "upx.zip"
           Expand-Archive -Path "upx.zip" -DestinationPath "."
           $upxExe = Get-ChildItem -Path "." -Filter "upx.exe" -Recurse | Select-Object -ExpandProperty FullName
-          
           & $upxExe --best --lzma dist\APKViewer.exe
 
       - name: Upload binary to Release

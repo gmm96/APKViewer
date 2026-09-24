@@ -1,4 +1,4 @@
-name: Build and Release APK Viewer
+name: Build APKViewer for Linux
 
 on:
   push:
@@ -7,7 +7,9 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -30,10 +32,30 @@ jobs:
         run: |
           pyinstaller --onefile \
               --noconsole \
-              --name APKViewer
-              --collect-all androguard \
+              --name APKViewer \
               --collect-all PIL \
               --hidden-import=PIL._tkinter_finder \
+              --exclude-module frida \
+              --exclude-module IPython \
+              --exclude-module bpython \
+              --exclude-module jupyter \
+              --exclude-module notebook \
+              --exclude-module matplotlib \
+              --exclude-module networkx \
+              --exclude-module numpy \
+              --exclude-module pandas \
+              --exclude-module scipy \
+              --exclude-module pydot \
+              --exclude-module pygments \
+              --exclude-module tornado \
+              --exclude-module PyQt5 \
+              --exclude-module PySide2 \
+              --exclude-module pdb \
+              --exclude-module pydoc \
+              --exclude-module pytest \
+              --exclude-module unittest \
+              --exclude-module tkinter.test \
+              --exclude-module xmlrpc \
               main.py
           upx --best --lzma dist/APKViewer
 
