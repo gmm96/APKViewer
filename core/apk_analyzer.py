@@ -26,9 +26,9 @@ class ApkAnalyzer:
         icon_extractor: Optional[IconExtractor] = None,
         section_extractors: Optional[Dict[str, AnalysisSectionExtractor]] = None,
     ):
-        self._apk_loader = apk_loader or ApkLoader()
-        self._icon_extractor = icon_extractor or IconExtractor()
-        self._section_extractors = section_extractors or self._default_section_extractors()
+        self._apk_loader: ApkLoader = apk_loader or ApkLoader()
+        self._icon_extractor: IconExtractor = icon_extractor or IconExtractor()
+        self._section_extractors: Dict[str, AnalysisSectionExtractor] = section_extractors or self._default_section_extractors()
 
     @staticmethod
     def _default_section_extractors() -> Dict[str, AnalysisSectionExtractor]:

@@ -36,7 +36,7 @@ jobs:
               --standalone \
               --onefile \
               --output-dir=dist \
-              --output-filename=APKViewer.bin \
+              --output-filename=APKViewer-linux.bin \
               --include-package-data=androguard \
               --include-data-dir=assets=assets \
               --enable-plugin=tk-inter \
@@ -48,6 +48,6 @@ jobs:
       - name: 'Upload binary to release'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/APKViewer.bin
+          files: dist/APKViewer-linux.bin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

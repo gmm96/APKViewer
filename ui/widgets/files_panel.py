@@ -3,15 +3,18 @@
 live text filter, column-header sorting, and a right-click context menu
 for Open / Open with / Copy / Extract to / Details.
 """
+
 import os
 import tkinter as tk
 from tkinter import ttk
+from typing import Optional
 
 from config import COLOR_FOLDER_BG, FONT_MONO_SMALL
 from core import FileTreeFilter
 from core.apk_extractor import ApkExtractor
 from ui.widgets.files_context_menu import FilesContextMenu
 from ui.widgets.tree_sorter import FileTreeSorter
+from utils.icon_loader import IconLoader
 from utils.size_formatter import HumanReadableSizeFormatter, SizeFormatter
 from utils.ui_helpers import AutoHideScrollbar
 
@@ -30,19 +33,34 @@ class FilesPanel(ttk.Frame):
     def __init__(
         self,
         parent,
-        tree_filter: FileTreeFilter = None,
-        size_formatter: SizeFormatter = None,
-        sorter: FileTreeSorter = None,
+        tree_filter: Optional[FileTreeFilter] = None,
+        size_formatter: Optional[SizeFormatter] = None,
+        sorter: Optional[FileTreeSorter] = None,
+        icon_loader: Optional[IconLoader] = None,
     ):
         super().__init__(parent)
         self._tree_filter = tree_filter or FileTreeFilter()
         self._size_formatter = size_formatter or HumanReadableSizeFormatter()
         self._sorter = sorter or FileTreeSorter()
+        self._icon_loader = icon_loader or IconLoader()
+        
         self._tree_data = {}
-
         self._node_states = {}
         self.apk_path = None
         self._extractor = ApkExtractor()
+
+        # Pre-load tree node icons so they stay in memory.
+        # Right padding is added so there is a visual gap between the icon and the text.
+        self._icon_file = self._icon_loader.load_icon(
+            "assets/icons/color/file.png",
+            padding_left=4,
+            padding_right=8
+        )
+        self._icon_folder = self._icon_loader.load_icon(
+            "assets/icons/color/directory.png",
+            padding_left=4,
+            padding_right=8
+        )
 
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=0)
@@ -59,6 +77,7 @@ class FilesPanel(ttk.Frame):
             lambda: self.apk_path,
             size_formatter=self._size_formatter,
             get_meta_cb=self._resolve_meta,
+            icon_loader=self._icon_loader,
         )
 
     def _build_treeview(self):
@@ -171,7 +190,11 @@ class FilesPanel(ttk.Frame):
                 ext = os.path.splitext(name)[1].lstrip(".").upper()
                 type_label = f"{ext} File" if ext else "File"
                 self.tree.insert(
-                    parent_iid, tk.END, iid=iid, text=f" \U0001F4C4 {name}",
+                    parent_iid, 
+                    tk.END, 
+                    iid=iid, 
+                    text=name,
+                    image=self._icon_file,
                     values=(type_label, size_str, compressed_str, modified_str),
                     tags=("file",),
                 )
@@ -182,7 +205,8 @@ class FilesPanel(ttk.Frame):
                     parent_iid,
                     tk.END,
                     iid=iid,
-                    text=f" \U0001F4C1 {name}",
+                    text=name,
+                    image=self._icon_folder,
                     values=(f"Directory ({child_count})", size_str, compressed_str, modified_str),
                     open=is_open,
                     tags=("folder",),

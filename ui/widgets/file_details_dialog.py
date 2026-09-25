@@ -3,6 +3,7 @@ Popup dialog showing the parsed details of selected file(s) or folder(s).
 """
 import tkinter as tk
 from tkinter import ttk
+from typing import Optional
 
 from ui.widgets.modal_dialog_support import ModalDialogPositioner
 
@@ -10,11 +11,11 @@ from ui.widgets.modal_dialog_support import ModalDialogPositioner
 class FileDetailsDialog:
     """Builds and shows the modal 'Details' popup for files/folders."""
 
-    def __init__(self, parent: tk.Misc, positioner: ModalDialogPositioner = None):
-        self._parent = parent
-        self._positioner = positioner or ModalDialogPositioner()
+    def __init__(self, parent: tk.Misc, positioner: Optional[ModalDialogPositioner] = None):
+        self._parent: tk.Misc = parent
+        self._positioner: ModalDialogPositioner = positioner or ModalDialogPositioner()
 
-    def show(self, items_data: list, summary: dict = None) -> None:
+    def show(self, items_data: list, summary: Optional[dict] = None) -> None:
         if not items_data:
             return
 
@@ -48,7 +49,7 @@ class FileDetailsDialog:
         }
         self._render_grid(parent, fields)
 
-    def _build_multi_item(self, parent: ttk.Frame, items: list, summary: dict = None) -> None:
+    def _build_multi_item(self, parent: ttk.Frame, items: list, summary: Optional[dict] = None) -> None:
         fields = {"Items Selected:": str(len(items))}
 
         if summary:
@@ -71,11 +72,9 @@ class FileDetailsDialog:
     def _render_grid(parent: ttk.Frame, fields: dict) -> None:
         row_idx = 0
         for label_text, value_text in fields.items():
-            ttk.Label(parent, text=label_text, width=15, font=("", 0, "bold")).grid(
-                row=row_idx, column=0, sticky="nw", pady=5
-            )
-            ttk.Label(parent, text=str(value_text), wraplength=250).grid(
-                row=row_idx, column=1, sticky="w", pady=5, padx=(10, 0)
-            )
+            label = ttk.Label(parent, text=label_text, width=15, font=("", 0, "bold"))
+            label.grid(row=row_idx, column=0, sticky="nw", pady=5)
+            value = ttk.Label(parent, text=str(value_text), wraplength=250)
+            value.grid(row=row_idx, column=1, sticky="w", pady=5, padx=(10, 0))
             row_idx += 1
         parent.columnconfigure(1, weight=1)

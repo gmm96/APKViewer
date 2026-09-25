@@ -14,14 +14,13 @@ import os
 import tempfile
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-
-from PIL import Image, ImageTk
+from typing import Optional
 
 from core.apk_extractor import ApkExtractor
 from ui.widgets.file_details_dialog import FileDetailsDialog
 from ui.widgets.os_file_opener import OsFileOpener, default_os_file_opener
 from utils.clipboard_service import ClipboardFileCopier, default_clipboard_file_copier
-from utils.ui_helpers import AssetPathResolver
+from utils.icon_loader import IconLoader
 
 
 class FilesContextMenu:
@@ -33,12 +32,12 @@ class FilesContextMenu:
         self,
         tree: ttk.Treeview,
         extractor: ApkExtractor,
-        get_apk_path_cb,
-        size_formatter=None,
+        get_apk_path_cb: Callable[[], str],
+        size_formatter: Optional[SizeFormatter] = None,
         get_meta_cb=None,
-        os_file_opener: OsFileOpener = None,
-        clipboard_copier: ClipboardFileCopier = None,
-        asset_path_resolver: AssetPathResolver = None,
+        os_file_opener: Optional[OsFileOpener] = None,
+        clipboard_copier: Optional[ClipboardFileCopier] = None,
+        icon_loader: Optional[IconLoader] = None,
     ):
         self._tree = tree
         self._extractor = extractor
@@ -52,25 +51,52 @@ class FilesContextMenu:
 
         self._os_file_opener = os_file_opener or default_os_file_opener()
         self._clipboard_copier = clipboard_copier or default_clipboard_file_copier()
-        self._asset_path_resolver = asset_path_resolver or AssetPathResolver()
+        self._icon_loader = icon_loader or IconLoader()
 
         self._temp_dir = tempfile.TemporaryDirectory(prefix="apkviewer_")
 
         self._menu = tk.Menu(tree, tearoff=0)
 
-        self._icon_open = self._load_icon("assets/icons/file_open.png")
-        self._icon_open_with = self._load_icon("assets/icons/file_open_with.png")
-        self._icon_copy = self._load_icon("assets/icons/file_copy.png")
-        self._icon_extract = self._load_icon("assets/icons/file_unarchive.png")
-        self._icon_info = self._load_icon("assets/icons/file_info.png")
+        # Delegate icon loading, tinting, and padding to the injected IconLoader
+        self.icon_hex_color = "#333333"  
+        self._icon_open = self._icon_loader.load_icon(
+            "assets/icons/outline/open_file.png",
+            hex_color=self.icon_hex_color,
+            padding_left=8,
+            padding_right=8
+        )
+        self._icon_open_with = self._icon_loader.load_icon(
+            "assets/icons/outline/open_with_file.png", 
+            hex_color=self.icon_hex_color,
+            padding_left=8,
+            padding_right=8
+        )
+        self._icon_copy = self._icon_loader.load_icon(
+            "assets/icons/outline/copy_file.png", 
+            hex_color=self.icon_hex_color,
+            padding_left=8,
+            padding_right=8
+        )
+        self._icon_extract = self._icon_loader.load_icon(
+            "assets/icons/outline/unarchive_file.png", 
+            hex_color=self.icon_hex_color,
+            padding_left=8,
+            padding_right=8
+        )
+        self._icon_info = self._icon_loader.load_icon(
+            "assets/icons/outline/file_info.png", 
+            hex_color=self.icon_hex_color,
+            padding_left=8,
+            padding_right=8
+        )
 
-        self._menu.add_command(label="{:<40}".format("  Open"), command=self._cmd_open, image=self._icon_open, compound=tk.LEFT)
-        self._menu.add_command(label="{:<40}".format("  Open with..."), command=self._cmd_open_with, image=self._icon_open_with, compound=tk.LEFT)
+        self._menu.add_command(label="{:<40}".format("Open"), command=self._cmd_open, image=self._icon_open, compound=tk.LEFT)
+        self._menu.add_command(label="{:<40}".format("Open with..."), command=self._cmd_open_with, image=self._icon_open_with, compound=tk.LEFT)
         self._menu.add_separator()
-        self._menu.add_command(label="{:<40}".format("  Copy File"), command=self._cmd_copy, image=self._icon_copy, compound=tk.LEFT)
-        self._menu.add_command(label="{:<40}".format("  Extract to..."), command=self._cmd_extract, image=self._icon_extract, compound=tk.LEFT)
+        self._menu.add_command(label="{:<40}".format("Copy File"), command=self._cmd_copy, image=self._icon_copy, compound=tk.LEFT)
+        self._menu.add_command(label="{:<40}".format("Extract to..."), command=self._cmd_extract, image=self._icon_extract, compound=tk.LEFT)
         self._menu.add_separator()
-        self._menu.add_command(label="{:<40}".format("  Details"), command=self._cmd_details, image=self._icon_info, compound=tk.LEFT)
+        self._menu.add_command(label="{:<40}".format("Details"), command=self._cmd_details, image=self._icon_info, compound=tk.LEFT)
 
         self._tree.bind("<Button-3>", self._on_right_click)
         self._tree.bind("<Button-2>", self._on_right_click)
@@ -80,24 +106,6 @@ class FilesContextMenu:
 
         # 2. Close menu when clicking completely outside the app (losing window focus)
         self._menu.bind("<FocusOut>", lambda e: self._menu.unpost())
-
-    def _load_icon(self, relative_path: str, size: tuple = (16, 16), hex_color: str = "#333333", padding_left: int = 8, padding_right: int = 4):
-        """Loads, tints, resizes and pads an icon with transparent margin using Pillow."""
-        path = self._asset_path_resolver.resolve(relative_path)
-
-        img = Image.open(path).convert("RGBA")
-
-        alpha_mask = img.getchannel("A")
-        colored_img = Image.new("RGBA", img.size, color=hex_color)
-        colored_img.putalpha(alpha_mask)
-
-        colored_img = colored_img.resize(size, Image.Resampling.LANCZOS)
-
-        canvas_width = padding_left + size[0] + padding_right
-        canvas = Image.new("RGBA", (canvas_width, size[1]), (0, 0, 0, 0))
-        canvas.paste(colored_img, (padding_left, 0))
-
-        return ImageTk.PhotoImage(canvas)
 
     def _on_right_click(self, event):
         iid = self._tree.identify_row(event.y)

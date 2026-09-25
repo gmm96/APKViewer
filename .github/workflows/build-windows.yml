@@ -33,7 +33,7 @@ jobs:
               --onefile `
               --assume-yes-for-downloads `
               --output-dir=dist `
-              --output-filename=APKViewer.exe `
+              --output-filename=APKViewer-windows.exe `
               --windows-console-mode=disable `
               --include-package-data=androguard `
               --include-data-dir=assets=assets `
@@ -45,6 +45,6 @@ jobs:
       - name: 'Upload binary to release'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/APKViewer.exe
+          files: dist/APKViewer-windows.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
