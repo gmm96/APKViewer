@@ -3,6 +3,7 @@
 """
 import tkinter as tk
 from tkinter import ttk
+from typing import Optional
 
 from config import COLOR_TEXT_BG, FONT_MONO
 from ui.context_menu import TextContextMenu
@@ -11,9 +12,9 @@ from utils.ui_helpers import AutoHideScrollbar
 
 
 class ManifestPanel(ttk.Frame):
-    def __init__(self, parent, context_menu: TextContextMenu, highlighter: XmlSyntaxHighlighter = None):
+    def __init__(self, parent, context_menu: TextContextMenu, highlighter: Optional[XmlSyntaxHighlighter] = None) -> None:
         super().__init__(parent)
-        self._highlighter = highlighter or XmlSyntaxHighlighter()
+        self._highlighter: XmlSyntaxHighlighter = highlighter or XmlSyntaxHighlighter()
 
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)

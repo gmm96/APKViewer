@@ -2,18 +2,12 @@
 Handles lazy extraction of specific files or directories from an APK.
 Uses a pluggable decoder architecture to remain completely agnostic of file formats.
 """
+
 import os
 import zipfile
 from typing import List
-
-# Handle different Androguard versions dynamically
-try:
-    from androguard.core.bytecodes.axml import AXMLPrinter
-except ImportError:
-    try:
-        from androguard.core.axml import AXMLPrinter
-    except ImportError:
-        AXMLPrinter = None
+from androguard.core.axml import AXMLPrinter
+from typing import Optional
 
 
 class FileDecoder:
@@ -43,7 +37,7 @@ class AxmlDecoder(FileDecoder):
 
 
 class ApkExtractor:
-    def __init__(self, decoders: List[FileDecoder] = None):
+    def __init__(self, decoders: Optional[List[FileDecoder]] = None):
         # Inject known special cases here; the extractor remains agnostic
         self._decoders = decoders if decoders is not None else [AxmlDecoder()]
 
@@ -72,7 +66,7 @@ class ApkExtractor:
 
         return extracted_paths
 
-    def _extract_single_file(self, zf: zipfile.ZipFile, internal_path: str, dest_dir: str) -> str:
+    def _extract_single_file(self, zf: zipfile.ZipFile, internal_path: str, dest_dir: str) -> Optional[str]:
         dest_dir_abs = os.path.abspath(dest_dir)
         out_path = os.path.abspath(os.path.join(dest_dir_abs, *internal_path.split("/")))
 

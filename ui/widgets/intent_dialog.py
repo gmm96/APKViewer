@@ -3,6 +3,7 @@ Popup dialog showing the parsed details of a single intent-filter action.
 """
 import tkinter as tk
 from tkinter import messagebox, ttk
+from typing import Optional
 
 from config import FONT_MONO
 from ui.widgets.modal_dialog_support import ModalDialogPositioner
@@ -43,8 +44,8 @@ class IntentDetailsDialog:
     def __init__(
         self,
         parent: tk.Misc,
-        parser: IntentActionParser = None,
-        positioner: ModalDialogPositioner = None,
+        parser: Optional[IntentActionParser] = None,
+        positioner: Optional[ModalDialogPositioner] = None,
     ):
         self._parent = parent
         self._parser = parser or IntentActionParser()

@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Pipx Environment",
+            "name": "Python3.14 APKViewer .venv",
             "type": "debugpy",
             "request": "launch",
-            "program": "main.py",
+            "python": "${command:python.interpreterPath}",
+            "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
-            "python": "/home/gmm/.local/share/pipx/venvs/androguard/bin/python",
-            "args": ["/home/gmm/9.3.Alternative.apk"]
+            "args": "/home/gmm/9.3.Alternative.apk"
         }
     ]
 }

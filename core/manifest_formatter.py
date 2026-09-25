@@ -4,8 +4,8 @@ Formats an APK's AndroidManifest.xml into pretty-printed text.
 import os
 import xml.dom.minidom as minidom
 from abc import ABC, abstractmethod
-
-from utils.optional_deps import ET, HAS_LXML, etree
+from typing import Optional
+from lxml import etree
 
 
 class XmlSerializer(ABC):
@@ -23,15 +23,15 @@ class LxmlSerializer(XmlSerializer):
 
 class ElementTreeSerializer(XmlSerializer):
     def serialize(self, xml_root) -> bytes:
-        return ET.tostring(xml_root, encoding="utf-8")
+        return etree.tostring(xml_root, encoding="utf-8")
 
 
 def default_xml_serializer() -> XmlSerializer:
-    return LxmlSerializer() if HAS_LXML else ElementTreeSerializer()
+    return LxmlSerializer()
 
 
 class ManifestFormatter:
-    def __init__(self, serializer: XmlSerializer = None):
+    def __init__(self, serializer: Optional[XmlSerializer] = None):
         self._serializer = serializer or default_xml_serializer()
 
     def format(self, apk) -> str:

@@ -3,14 +3,15 @@ Top header: app icon, name/package labels and the "Load APK" button.
 """
 import tkinter as tk
 from tkinter import ttk
+from typing import Optional
 
 from config import FONT_SUBTITLE, FONT_TITLE
-from utils.optional_deps import HAS_PIL, ImageTk
+from PIL import ImageTk
 from utils.ui_helpers import PlaceholderIconFactory
 
 
 class AppHeader(ttk.Frame):
-    def __init__(self, parent, on_load_click, icon_factory: PlaceholderIconFactory = None):
+    def __init__(self, parent, on_load_click, icon_factory: Optional[PlaceholderIconFactory] = None):
         super().__init__(parent)
         self._icon_factory = icon_factory or PlaceholderIconFactory()
         self._placeholder_icon = self._icon_factory.create()
@@ -52,7 +53,7 @@ class AppHeader(ttk.Frame):
         self.load_button.config(state=tk.NORMAL if enabled else tk.DISABLED)
 
     def show_result(self, app_name: str, package_name: str, icon_image=None):
-        if icon_image is not None and HAS_PIL:
+        if icon_image is not None:
             self._current_icon = ImageTk.PhotoImage(icon_image)
             self.icon_label.config(image=self._current_icon)
 

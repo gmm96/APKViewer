@@ -4,6 +4,8 @@ label -> value dict ready for display. Sharing a common interface lets
 `ApkAnalyzer` treat them interchangeably (Open/Closed: a new section is
 added by writing a new extractor, without touching the analyzer).
 """
+
+from typing import Optional
 from abc import ABC, abstractmethod
 
 from androguard.core.apk import APK
@@ -143,7 +145,7 @@ class ComponentsExtractor(AnalysisSectionExtractor):
 class TrackerDetector(AnalysisSectionExtractor):
     """Scans DEX class packages for known analytics/ads/SDK signatures."""
 
-    def __init__(self, tracker_signatures: dict = None):
+    def __init__(self, tracker_signatures: Optional[dict] = None):
         self._tracker_signatures = tracker_signatures or KNOWN_TRACKERS
 
     def extract(self, apk: APK) -> dict:

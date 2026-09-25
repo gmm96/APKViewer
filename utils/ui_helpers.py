@@ -7,7 +7,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from config import COLOR_PLACEHOLDER_BG, COLOR_PLACEHOLDER_BORDER, ICON_SIZE
-from utils.optional_deps import HAS_PIL, Image, ImageDraw, ImageTk
+from PIL import Image, ImageDraw, ImageTk
 
 
 class PlaceholderIconFactory:
@@ -18,17 +18,15 @@ class PlaceholderIconFactory:
         self._bg_color = bg_color
         self._border_color = border_color
 
-    def create(self):
-        if HAS_PIL:
-            img = Image.new("RGB", self._size, color=self._bg_color)
-            draw = ImageDraw.Draw(img)
-            draw.rectangle(
-                [0, 0, self._size[0] - 1, self._size[1] - 1],
-                outline=self._border_color,
-                width=2,
-            )
-            return ImageTk.PhotoImage(img)
-        return tk.PhotoImage(width=self._size[0], height=self._size[1])
+    def create(self) -> ImageTk.PhotoImage:
+        img = Image.new("RGB", self._size, color=self._bg_color)
+        draw = ImageDraw.Draw(img)
+        draw.rectangle(
+            [0, 0, self._size[0] - 1, self._size[1] - 1],
+            outline=self._border_color,
+            width=2,
+        )
+        return ImageTk.PhotoImage(img)
 
 
 class AutoHideScrollbar:

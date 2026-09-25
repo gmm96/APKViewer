@@ -6,17 +6,16 @@ Follows the Single Responsibility Principle by decoupling image processing
 logic from UI layout widgets.
 """
 
-import tkinter as tk
 from typing import Optional, Tuple
+from PIL import Image, ImageTk
 
-from utils.optional_deps import HAS_PIL, Image, ImageTk
 from utils.ui_helpers import AssetPathResolver
 
 
 class IconLoader:
     """Loads and processes UI icons dynamically."""
 
-    def __init__(self, asset_path_resolver: AssetPathResolver = None):
+    def __init__(self, asset_path_resolver: Optional[AssetPathResolver] = None):
         self._asset_path_resolver = asset_path_resolver or AssetPathResolver()
 
     def load_icon(
@@ -26,18 +25,12 @@ class IconLoader:
         hex_color: Optional[str] = None,
         padding_left: int = 0,
         padding_right: int = 0,
-    ):
+    ) -> ImageTk.PhotoImage:
         """
         Loads an icon from the given path, tints it to the specified hex color,
         resizes it, and optionally adds transparent horizontal padding.
         """
         path = self._asset_path_resolver.resolve(relative_path)
-
-        if not HAS_PIL:
-            # Fallback if Pillow is not available in the environment.
-            # Returns the raw image without tinting or resizing.
-            return tk.PhotoImage(file=path)
-
         img = Image.open(path).convert("RGBA")
 
         # Extract alpha mask and create a new solid-color image

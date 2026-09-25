@@ -4,6 +4,7 @@ components, trackers) as read-only entry fields and scrollable list boxes.
 """
 import tkinter as tk
 from tkinter import ttk
+from typing import Optional
 
 from config import COLOR_TEXT_BG, FONT_MONO_SMALL, LABEL_WIDTH, MIN_LIST_LINES
 from ui.context_menu import TextContextMenu
@@ -18,7 +19,7 @@ class InfoPanel(ttk.Frame):
         parent,
         context_menu: TextContextMenu,
         on_intent_double_click,
-        line_marker: TextLineMarker = None,
+        line_marker: Optional[TextLineMarker] = None,
     ):
         super().__init__(parent)
         self._context_menu = context_menu

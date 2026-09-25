@@ -14,13 +14,14 @@ import os
 import tempfile
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from typing import Optional, Callable
+from typing import Optional
 
 from core.apk_extractor import ApkExtractor
 from ui.widgets.file_details_dialog import FileDetailsDialog
 from ui.widgets.os_file_opener import OsFileOpener, default_os_file_opener
 from utils.clipboard_service import ClipboardFileCopier, default_clipboard_file_copier
 from utils.icon_loader import IconLoader
+from utils.size_formatter import SizeFormatter
 
 
 class FilesContextMenu:
@@ -263,7 +264,7 @@ class FilesContextMenu:
         dialog = FileDetailsDialog(self._tree)
         dialog.show(items_data, summary)
 
-    def _build_summary(self, paths: list) -> dict:
+    def _build_summary(self, paths: list) -> Optional[dict]:
         """Real totals (not just a count) for the multi-select Details
         popup - mirrors how file managers show "N items, totaling X" when
         several rows are selected at once."""

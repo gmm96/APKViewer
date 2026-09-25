@@ -5,22 +5,21 @@ import io
 import os
 
 from androguard.core.apk import APK
+from typing import Optional
 
 from config import ANDROID_NS, DPI_SCORES, ICON_SIZE
-from utils.optional_deps import HAS_PIL, Image
+from PIL import Image
 
 
 class IconExtractor:
     """Finds and loads the highest-resolution launcher icon declared by an APK."""
 
-    def __init__(self, icon_size=ICON_SIZE, dpi_scores: dict = None):
+    def __init__(self, icon_size=ICON_SIZE, dpi_scores: Optional[dict] = None):
         self._icon_size = icon_size
         self._dpi_scores = dpi_scores or DPI_SCORES
 
     def extract(self, apk: APK):
         """Return a PIL Image for the app's icon, or None if unavailable."""
-        if not HAS_PIL:
-            return None
         try:
             icon_path = apk.get_app_icon(max_dpi=True)
 
