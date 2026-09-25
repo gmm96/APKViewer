@@ -14,7 +14,7 @@ import os
 import tempfile
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from typing import Optional
+from typing import Optional, Callable
 
 from core.apk_extractor import ApkExtractor
 from ui.widgets.file_details_dialog import FileDetailsDialog
@@ -32,7 +32,7 @@ class FilesContextMenu:
         self,
         tree: ttk.Treeview,
         extractor: ApkExtractor,
-        get_apk_path_cb: Callable[[], str],
+        get_apk_path_cb,
         size_formatter: Optional[SizeFormatter] = None,
         get_meta_cb=None,
         os_file_opener: Optional[OsFileOpener] = None,
