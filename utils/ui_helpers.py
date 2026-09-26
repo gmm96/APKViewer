@@ -53,15 +53,12 @@ class AssetPathResolver:
     Resolves a path relative to the app's bundled assets (icons, etc.),
     working both when run from source and when frozen into a single
     compiled executable.
-
-    Kept as its own small class - rather than a bare module-level function
-    - so it can be constructor-injected and swapped out in tests, the same
-    way `SizeFormatter` or `IconExtractor`'s DPI table are.
     """
 
     def resolve(self, relative_path: str) -> str:
-        if "__compiled__" in globals():
-            base_path = os.path.dirname(sys.executable)
-        else:
-            base_path = os.path.abspath(".")
+        # sys.modules['__main__'].__file__ apunta siempre al script principal (main.py)
+        # En desarrollo es tu carpeta local; en el .exe es la carpeta Temp de Nuitka.
+        main_file = sys.modules['__main__'].__file__
+        base_path = os.path.dirname(os.path.abspath(main_file))
+        
         return os.path.join(base_path, relative_path)
