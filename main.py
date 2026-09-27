@@ -11,7 +11,8 @@ import tkinter
 from apkviewer.presentation import ApkAnalyzerApp
 
 
-def main():
+def main() -> None:
+    """Entry point for the APKViewer project"""
     root: tkinter.Tk = tkinter.Tk()
     app: ApkAnalyzerApp = ApkAnalyzerApp(root)
 

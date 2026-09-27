@@ -11,7 +11,7 @@ from typing import Any
 class FileTreeBuilder:
     def build(self, apk_path: str) -> dict[str, dict[str, Any]]:
         """Read the APK as a zip file and build a nested dict tree of its entries."""
-        root_node = {}
+        root_node: dict[str, dict[str, Any]] = {}
         try:
             with zipfile.ZipFile(apk_path, "r") as zf:
                 for info in zf.infolist():
@@ -60,7 +60,9 @@ class FileTreeBuilder:
                 total_compressed += meta.get("__compressed__", 0)
                 mtime = meta.get("__modified__", "")
             else:
-                folder_size, folder_comp, mtime = self._aggregate_folder_sizes(meta.get("__children__", {}))
+                folder_size, folder_comp, mtime = self._aggregate_folder_sizes(
+                    meta.get("__children__", {})
+                )
                 meta["__size__"] = folder_size
                 meta["__compressed__"] = folder_comp
                 meta["__modified__"] = mtime

@@ -48,19 +48,30 @@ class InfoPanel(ttk.Frame):
 
     # --- Field builders ------------------------------------------------------
 
-    def _add_entry_field(self, parent: ttk.LabelFrame, row: int, label_text: str, value: Any) -> None:
-        ttk.Label(parent, text=label_text, width=LABEL_WIDTH).grid(row=row, column=0, sticky="w", padx=10, pady=5)
-
+    def _add_entry_field(
+            self,
+            parent: ttk.LabelFrame,
+            row: int,
+            label_text: str,
+            value: Any
+        ) -> None:
+        label: ttk.Label = ttk.Label(parent, text=label_text, width=LABEL_WIDTH)
+        label.grid(row=row, column=0, sticky="w", padx=10, pady=5)
         entry = ttk.Entry(parent)
         entry.insert(0, str(value) if value is not None else "")
         entry.configure(state="readonly")
         entry.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
         parent.columnconfigure(1, weight=1)
 
-    def _add_list_field(self, parent: ttk.LabelFrame, row: int, label_text: str, items: list[Any]) -> None:
-        ttk.Label(parent, text=f"{label_text} ({len(items)})", width=LABEL_WIDTH).grid(
-            row=row, column=0, sticky="nw", padx=10, pady=5
-        )
+    def _add_list_field(
+            self,
+            parent: ttk.LabelFrame,
+            row: int,
+            label_text: str,
+            items: list[Any]
+        ) -> None:
+        label: ttk.Label = ttk.Label(parent, text=f"{label_text} ({len(items)})", width=LABEL_WIDTH)
+        label.grid(row=row, column=0, sticky="nw", padx=10, pady=5)
         display_text, line_count = self._build_display_text(label_text, items)
         container = ttk.Frame(parent)
         container.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
@@ -68,20 +79,22 @@ class InfoPanel(ttk.Frame):
         container.columnconfigure(0, weight=1)
         container.rowconfigure(0, weight=1)
         text_widget = tk.Text(
-            container, height=line_count, wrap=tk.NONE, borderwidth=1,
-            relief="solid", bg=COLOR_TEXT_BG, font=FONT_MONO_SMALL,
+            container,
+            height=line_count,
+            wrap=tk.NONE,
+            borderwidth=1,
+            relief="solid",
+            bg=COLOR_TEXT_BG,
+            font=FONT_MONO_SMALL,
         )
         h_scroll = ttk.Scrollbar(container, orient="horizontal", command=text_widget.xview)
         autohide = AutoHideScrollbar(h_scroll, {"row": 1, "column": 0, "sticky": "ew"})
         text_widget.configure(xscrollcommand=autohide.scroll_command)
         text_widget.grid(row=0, column=0, sticky="ew")
-
         text_widget.insert(tk.END, display_text)
         text_widget.configure(state="disabled")
-
         self._line_marker.bind(text_widget)
         self._context_menu.attach(text_widget)
-
         if label_text == "Intent Actions":
             text_widget.bind("<Double-Button-1>", self._handle_intent_double_click)
 

@@ -35,5 +35,5 @@ jobs:
       - name: 'Run Mypy'
         if: always()
         run: |
-          mypy --install-types --non-interactive main.py apkviewer/ || true
+          mypy --install-types --non-interactive --explicit-package-bases main.py apkviewer/ || true
           mypy --explicit-package-bases --ignore-missing-imports main.py apkviewer/

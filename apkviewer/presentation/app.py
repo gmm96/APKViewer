@@ -60,7 +60,11 @@ class ApkAnalyzerApp:
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
         notebook = ttk.Notebook(self.root)
         notebook.pack(expand=True, fill=tk.BOTH, padx=10, pady=(0, 10))
-        self.info_panel: InfoPanel = InfoPanel(notebook, self.context_menu, on_intent_double_click=self.intent_dialog.open)
+        self.info_panel: InfoPanel = InfoPanel(
+            notebook,
+            self.context_menu,
+            on_intent_double_click=self.intent_dialog.open
+        )
         notebook.add(self.info_panel, text="Information")
         self.manifest_panel: ManifestPanel = ManifestPanel(notebook, self.context_menu)
         notebook.add(self.manifest_panel, text="Manifest")
@@ -96,11 +100,23 @@ class ApkAnalyzerApp:
             result = self._analyzer.analyze(apk_path)
             manifest_xml = self._manifest_formatter.format(result.apk)
             file_tree = self._file_tree_builder.build(apk_path)
-            self.root.after(0, lambda: self._render_result(apk_path, result, manifest_xml, file_tree))
+            self.root.after(
+                0,
+                lambda: self._render_result(
+                    apk_path,
+                    result,
+                    manifest_xml,
+                    file_tree
+                )
+            )
             self._set_status("Analysis completed successfully.", "green")
         except Exception as exc:
             self.root.after(
-                0, lambda: messagebox.showerror("Error", f"An error occurred while analyzing the APK:\n{exc}")
+                0,
+                lambda: messagebox.showerror(
+                    "Error",
+                    f"An error occurred while analyzing the APK:\n{exc}"
+                )
             )
             self.root.after(0, self.header.show_error)
             self._set_status("Analysis failed.", "red")

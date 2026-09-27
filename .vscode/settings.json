@@ -7,5 +7,4 @@
         "--explicit-package-bases",
         "--ignore-missing-imports"
     ],
-    "mypy-type-checker.reportingScope": "workspace"
 }

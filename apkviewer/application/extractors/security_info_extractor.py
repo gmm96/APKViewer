@@ -11,14 +11,19 @@ from apkviewer.domain.interfaces import AnalysisSectionExtractor
 
 class SecurityInfoExtractor(AnalysisSectionExtractor):
     def extract(self, apk: APK) -> dict[str, Any]:
-        perms, appops = [], []
+        perms: list[str] = []
+        appops: list[str] = []
+        certs: list[str] = []
+
         for p in apk.get_permissions():
             (perms if p.startswith("android.permission.") else appops).append(p)
 
-        certs = []
         for cert in apk.get_certificates():
             try:
-                certs.append(f"Issuer: {cert.issuer.human_friendly}\nSubject: {cert.subject.human_friendly}")
+                certs.append(
+                    f"Issuer: {cert.issuer.human_friendly}\n"
+                    f"Subject: {cert.subject.human_friendly}"
+                )
             except Exception:
                 certs.append("Unknown / Encrypted Certificate")
 

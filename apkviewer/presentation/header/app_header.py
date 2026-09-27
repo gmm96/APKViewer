@@ -49,7 +49,7 @@ class AppHeader(ttk.Frame):
         self.load_button.pack(side=tk.RIGHT)
 
     def reset_to_placeholder(self, file_name: str) -> None:
-        self._current_icon: Optional[ImageTk.PhotoImage] = None
+        self._current_icon = None
         self.icon_label.config(image=self._placeholder_icon)
         self.name_label.config(text="Analyzing APK...")
         self.package_label.config(text=file_name)
@@ -62,7 +62,7 @@ class AppHeader(ttk.Frame):
 
     def show_result(self, app_name: str, package_name: str, icon_image=None) -> None:
         if icon_image is not None:
-            self._current_icon: Optional[ImageTk.PhotoImage] = ImageTk.PhotoImage(icon_image)
+            self._current_icon = ImageTk.PhotoImage(icon_image)
             self.icon_label.config(image=self._current_icon)
 
         self.name_label.config(text=app_name or "Unknown App")
