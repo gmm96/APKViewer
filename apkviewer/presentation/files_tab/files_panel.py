@@ -7,8 +7,10 @@ for Open / Open with / Copy / Extract to / Details.
 import os
 import tkinter as tk
 from tkinter import ttk
-from PIL import ImageTk
 from typing import Any
+from functools import partial
+
+from PIL import ImageTk
 
 from apkviewer.application import FileTreeFilter, FileTreeSorter
 from apkviewer.config import COLOR_FOLDER_BG, FONT_MONO_SMALL
@@ -90,8 +92,8 @@ class FilesPanel(ttk.Frame):
         self.tree.column("modified", width=150, minwidth=130, stretch=False, anchor="w")
 
         for column in _COLUMN_LABELS:
-            self.tree.heading(column, anchor="w", command=lambda c=column: self._sort_by(c))
-        
+            self.tree.heading(column, anchor="w", command=partial(self._sort_by, column))
+
         v_scroll = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         h_scroll = ttk.Scrollbar(self, orient="horizontal", command=self.tree.xview)
         autohide = AutoHideScrollbar(h_scroll, {"row": 1, "column": 0, "sticky": "ew"})
@@ -112,8 +114,8 @@ class FilesPanel(ttk.Frame):
     # --- Public API -------------------------------------------------------
 
     def render(self, apk_path: str, tree_data: dict[str, dict[str, Any]]) -> None:
-        self.apk_path: str | None = apk_path
-        self._tree_data: dict[str, Any] = tree_data
+        self.apk_path = apk_path
+        self._tree_data = tree_data
         self._node_states.clear()
         self._context_menu.reset_workspace()  # a new APK invalidates any previous extraction
         self.filter_entry.delete(0, tk.END)
@@ -121,9 +123,9 @@ class FilesPanel(ttk.Frame):
         self._populate(self._tree_data)
 
     def clear(self) -> None:
-        self.apk_path: str | None = None
+        self.apk_path = None
         self.tree.delete(*self.tree.get_children())
-        self._tree_data: dict[str, Any] = {}
+        self._tree_data = {}
         self._node_states.clear()
 
     def cleanup(self) -> None:

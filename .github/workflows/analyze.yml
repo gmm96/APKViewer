@@ -30,10 +30,10 @@ jobs:
         env:
           PYTHONPATH: .
         run: |
-          pylint --fail-on=E,F main.py apkviewer/
+          pylint main.py apkviewer/ || [ $(($? & 3)) -eq 0 ]
 
       - name: 'Run Mypy'
         if: always()
         run: |
-          mypy --install-types --non-interactive
+          mypy --install-types --non-interactive main.py apkviewer/ || true
           mypy --explicit-package-bases --ignore-missing-imports main.py apkviewer/

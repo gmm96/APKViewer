@@ -5,6 +5,8 @@ Top header: app icon, name/package labels and the "Load APK" button.
 import tkinter as tk
 from tkinter import ttk
 from typing import Optional
+from collections.abc import Callable
+
 from PIL import ImageTk
 
 from apkviewer.config import FONT_SUBTITLE, FONT_TITLE
@@ -12,7 +14,12 @@ from apkviewer.presentation.icons import PlaceholderIconFactory
 
 
 class AppHeader(ttk.Frame):
-    def __init__(self, parent, on_load_click, icon_factory: Optional[PlaceholderIconFactory] = None) -> None:
+    def __init__(
+            self,
+            parent: ttk.Frame,
+            on_load_click: Callable[[], None],
+            icon_factory: Optional[PlaceholderIconFactory] = None
+        ) -> None:
         super().__init__(parent)
         self._icon_factory: PlaceholderIconFactory = icon_factory or PlaceholderIconFactory()
         self._placeholder_icon: ImageTk.PhotoImage = self._icon_factory.create()

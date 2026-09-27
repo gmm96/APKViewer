@@ -3,4 +3,9 @@
     "python.languageServer": "Pylance",
     "python.analysis.typeCheckingMode": "basic",
     "python.analysis.diagnosticMode": "workspace",
+    "mypy-type-checker.args": [
+        "--explicit-package-bases",
+        "--ignore-missing-imports"
+    ],
+    "mypy-type-checker.reportingScope": "workspace"
 }
