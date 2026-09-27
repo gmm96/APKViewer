@@ -33,4 +33,4 @@ jobs:
       - name: 'Run Mypy'
         if: always()
         run: |
-          mypy main.py apkviewer/
+          mypy --explicit-package-bases main.py apkviewer/
