@@ -1,8 +1,8 @@
 name: 'Linting & Type Analysis'
 on:
   push:
-    tags-ignore:
-      - 'v*'
+    branches:
+      - '**'
   pull_request:
 
 jobs:
