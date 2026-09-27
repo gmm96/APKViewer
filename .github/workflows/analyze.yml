@@ -6,11 +6,11 @@ on:
   pull_request:
 
 jobs:
-  analyze:
+  pylint:
+    name: 'Linting: Pylint'
     runs-on: ${{ vars.LINUX_VERSION }}
     permissions:
       contents: read
-
     steps:
       - name: 'Checkout code'
         uses: actions/checkout@v4
@@ -19,11 +19,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ vars.PYTHON_VERSION }}
+          cache: 'pip'
 
       - name: 'Install dependencies'
         run: |
           python -m pip install --upgrade pip
-          pip install pylint mypy
+          pip install pylint
           pip install -r requirements.txt
 
       - name: 'Run Pylint'
@@ -32,8 +33,28 @@ jobs:
         run: |
           pylint main.py apkviewer/ || [ $(($? & 3)) -eq 0 ]
 
+  mypy:
+    name: 'Type Checking: Mypy'
+    runs-on: ${{ vars.LINUX_VERSION }}
+    permissions:
+      contents: read
+    steps:
+      - name: 'Checkout code'
+        uses: actions/checkout@v4
+
+      - name: 'Set up Python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ vars.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 'Install dependencies'
+        run: |
+          python -m pip install --upgrade pip
+          pip install mypy
+          pip install -r requirements.txt
+
       - name: 'Run Mypy'
-        if: always()
         run: |
           mypy --install-types --non-interactive --explicit-package-bases main.py apkviewer/ || true
           mypy --explicit-package-bases --ignore-missing-imports main.py apkviewer/
