@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: ${{ vars.WINDOWS_VERSION }}
     permissions:
       contents: write
 
@@ -18,7 +18,7 @@ jobs:
       - name: 'Set up Python'
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ vars.PYTHON_VERSION }}
 
       - name: 'Install Python dependencies'
         run: |
@@ -34,7 +34,7 @@ jobs:
               --assume-yes-for-downloads `
               --output-dir=dist `
               --output-filename=APKViewer-windows.exe `
-              --windows-console-mode=disable `
+              --windows-console-mode=attach `
               --include-package-data=androguard `
               --include-data-dir=assets=assets `
               --enable-plugin=tk-inter `

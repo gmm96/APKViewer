@@ -1,0 +1,36 @@
+name: 'Linting & Type Analysis'
+on:
+  push:
+    tags-ignore:
+      - 'v*'
+  pull_request:
+
+jobs:
+  analyze:
+    runs-on: ${{ vars.LINUX_VERSION }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: 'Checkout code'
+        uses: actions/checkout@v4
+
+      - name: 'Set up Python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ vars.PYTHON_VERSION }}
+
+      - name: 'Install dependencies'
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint mypy
+          pip install -r requirements.txt
+
+      - name: 'Run Pylint'
+        run: |
+          pylint --fail-on=E,F main.py apkviewer/
+
+      - name: 'Run Mypy'
+        if: always()
+        run: |
+          mypy main.py apkviewer/
