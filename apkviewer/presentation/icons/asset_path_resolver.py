@@ -13,7 +13,7 @@ class AssetPathResolver:
         # sys.modules['__main__'].__file__ always points at the entry
         # script (main.py): the project root in development, or Nuitka's
         # extracted temp directory when running as a frozen executable.
-        main_file = sys.modules["__main__"].__file__
+        main_file = sys.modules["__main__"].__file__    # pylint: disable=no-member
         assert main_file is not None
 
         base_path = os.path.dirname(os.path.abspath(main_file))

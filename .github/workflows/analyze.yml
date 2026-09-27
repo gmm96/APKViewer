@@ -27,10 +27,13 @@ jobs:
           pip install -r requirements.txt
 
       - name: 'Run Pylint'
+        env:
+          PYTHONPATH: .
         run: |
           pylint --fail-on=E,F main.py apkviewer/
 
       - name: 'Run Mypy'
         if: always()
         run: |
-          mypy --explicit-package-bases main.py apkviewer/
+          mypy --install-types --non-interactive
+          mypy --explicit-package-bases --ignore-missing-imports main.py apkviewer/
