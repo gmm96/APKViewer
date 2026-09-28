@@ -7,7 +7,7 @@ on:
 
 jobs:
   pylint:
-    name: 'Linting: Pylint'
+    name: '[Pylint] Linting'
     runs-on: ${{ vars.LINUX_VERSION }}
     permissions:
       contents: read
@@ -21,7 +21,7 @@ jobs:
           python-version: ${{ vars.PYTHON_VERSION }}
           cache: 'pip'
 
-      - name: 'Install dependencies'
+      - name: 'Install Python dependencies'
         run: |
           python -m pip install --upgrade pip
           pip install pylint
@@ -34,7 +34,7 @@ jobs:
           pylint main.py apkviewer/ || [ $(($? & 3)) -eq 0 ]
 
   mypy:
-    name: 'Type Checking: Mypy'
+    name: '[Mypy] Type Checking'
     runs-on: ${{ vars.LINUX_VERSION }}
     permissions:
       contents: read
@@ -48,13 +48,16 @@ jobs:
           python-version: ${{ vars.PYTHON_VERSION }}
           cache: 'pip'
 
-      - name: 'Install dependencies'
+      - name: 'Install Python dependencies'
         run: |
           python -m pip install --upgrade pip
           pip install mypy
           pip install -r requirements.txt
 
-      - name: 'Run Mypy'
+      - name: 'Install Mypy required types'
         run: |
           mypy --install-types --non-interactive --explicit-package-bases main.py apkviewer/ || true
+
+      - name: 'Run Mypy'
+        run: |
           mypy --explicit-package-bases --ignore-missing-imports main.py apkviewer/
