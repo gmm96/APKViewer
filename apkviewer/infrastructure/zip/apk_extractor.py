@@ -42,6 +42,13 @@ class ApkExtractor:
 
         return extracted_paths
 
+    def extract_all(self, apk_path: str, dest_dir: str) -> list[str]:
+        """Extract every file of the APK into `dest_dir`, preserving its folder structure."""
+        with zipfile.ZipFile(apk_path, "r") as zf:
+            file_names = [name for name in zf.namelist() if not name.endswith("/")]
+            results = (self._extract_single_file(zf, name, dest_dir) for name in file_names)
+            return [path for path in results if path]
+
     def _extract_single_file(self, zf: zipfile.ZipFile, internal_path: str, dest_dir: str) -> str | None:
         dest_dir_abs = os.path.abspath(dest_dir)
         out_path = os.path.abspath(os.path.join(dest_dir_abs, *internal_path.split("/")))

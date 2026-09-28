@@ -14,18 +14,29 @@ from apkviewer.config import ANDROID_NS, DPI_SCORES, ICON_SIZE
 class IconExtractor:
     """Finds and loads the highest-resolution launcher icon declared by an APK."""
 
-    def __init__(self, icon_size: tuple[int, int] = ICON_SIZE, dpi_scores: dict[str, int] | None = None) -> None:
+    def __init__(
+            self,
+            icon_size: tuple[int, int] = ICON_SIZE,
+            dpi_scores: dict[str, int] | None = None
+        ) -> None:
         self._icon_size: tuple[int, int] = icon_size
         self._dpi_scores: dict[str, int] = dpi_scores or DPI_SCORES
 
     def extract(self, apk: APK) -> Image.Image | None:
-        """Return a PIL Image for the app's icon, or None if unavailable."""
+        """Return the app's icon resized to the UI thumbnail size, or None if unavailable."""
+        icon = self.extract_full_resolution(apk)
+        if icon is None:
+            return None
+        return icon.resize(self._icon_size, Image.Resampling.LANCZOS)
+
+    def extract_full_resolution(self, apk: APK) -> Image.Image | None:
+        """Return the app's icon at its original (highest available) resolution, or None."""
         try:
             icon_path = apk.get_app_icon(max_dpi=True)
             if icon_path and icon_path.lower().endswith((".png", ".webp", ".jpg")):
                 icon_data = apk.get_file(icon_path)
                 if icon_data:
-                    return self._load_and_resize(icon_data)
+                    return self._load(icon_data)
 
             base_name = self._resolve_icon_base_name(apk, icon_path)
             return self._find_best_icon_by_name(apk, base_name)
@@ -56,11 +67,13 @@ class IconExtractor:
         )
         for match in matches:
             try:
-                return self._load_and_resize(apk.get_file(match))
+                return self._load(apk.get_file(match))
             except Exception:
                 continue
         return None
 
-    def _load_and_resize(self, icon_bytes: bytes) -> Image.Image:
+    @staticmethod
+    def _load(icon_bytes: bytes) -> Image.Image:
         img = Image.open(io.BytesIO(icon_bytes))
-        return img.resize(self._icon_size, Image.Resampling.LANCZOS)
+        img.load()  # decode now so corrupt images fail here, not later at save/resize time
+        return img

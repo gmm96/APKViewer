@@ -4,12 +4,14 @@ and the infrastructure adapters into the operations the UI needs
 (analyzing an APK, formatting its manifest, building/filtering/sorting
 its file tree, extracting its icon).
 """
+
+from .app_info_serializer import AppInfoSerializer
 from .apk_analyzer import ApkAnalyzer
-from .icon_extractor import IconExtractor
-from .manifest_formatter import ManifestFormatter
 from .file_tree_builder import FileTreeBuilder
 from .file_tree_filter import FileTreeFilter
 from .file_tree_sorter import FileTreeSorter
+from .icon_extractor import IconExtractor
+from .manifest_formatter import ManifestFormatter
 
 __all__ = [
     "ApkAnalyzer",
@@ -18,4 +20,5 @@ __all__ = [
     "FileTreeBuilder",
     "FileTreeFilter",
     "FileTreeSorter",
+    "AppInfoSerializer",
 ]

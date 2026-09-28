@@ -11,17 +11,19 @@ clipboard) are intentionally NOT implemented here - they're injected as
 focused on being a menu.
 """
 
+from collections.abc import Callable
 import os
 import tempfile
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
-from PIL import ImageTk
-from typing import Optional
+from tkinter import messagebox, ttk
 
+from PIL import ImageTk
 
 from apkviewer.domain.interfaces import ClipboardFileCopier, OsFileOpener, SizeFormatter
-from apkviewer.infrastructure import ApkExtractor, default_clipboard_file_copier, default_os_file_opener
+from apkviewer.infrastructure import ApkExtractor
+from apkviewer.presentation.common import ExtractToDialog
 from apkviewer.presentation.icons import IconLoader
+
 from .file_details_dialog import FileDetailsDialog
 
 
@@ -35,24 +37,29 @@ class FilesContextMenu:
         tree: ttk.Treeview,
         extractor: ApkExtractor,
         get_apk_path_cb,
-        size_formatter: Optional[SizeFormatter] = None,
+        os_file_opener: OsFileOpener,
+        clipboard_copier: ClipboardFileCopier,
+        extract_dialog: ExtractToDialog,
+        get_default_folder_name: Callable[[], str],
+        size_formatter: SizeFormatter | None = None,
         get_meta_cb=None,
-        os_file_opener: Optional[OsFileOpener] = None,
-        clipboard_copier: Optional[ClipboardFileCopier] = None,
-        icon_loader: Optional[IconLoader] = None,
+        icon_loader: IconLoader | None = None
     ) -> None:
         self._tree: ttk.Treeview = tree
         self._extractor: ApkExtractor = extractor
         self._get_apk_path = get_apk_path_cb
+        self._extract_dialog: ExtractToDialog = extract_dialog
+        self._get_default_folder_name: Callable[[], str] = get_default_folder_name
+
         # Optional: () -> dict mapping a tree iid to its raw {"__size__": ...}
         # metadata. Only used to compute real totals for the multi-select
         # Details summary; everything else in this class only ever reads
         # from the treeview's own (already-formatted) values.
         self._get_meta = get_meta_cb
-        self._size_formatter: Optional[SizeFormatter] = size_formatter
+        self._size_formatter: SizeFormatter | None = size_formatter
 
-        self._os_file_opener: OsFileOpener = os_file_opener or default_os_file_opener()
-        self._clipboard_copier: ClipboardFileCopier = clipboard_copier or default_clipboard_file_copier()
+        self._os_file_opener: OsFileOpener = os_file_opener
+        self._clipboard_copier: ClipboardFileCopier = clipboard_copier
         self._icon_loader: IconLoader = icon_loader or IconLoader()
 
         self._temp_dir: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory(prefix="apkviewer_")
@@ -224,24 +231,10 @@ class FilesContextMenu:
     def _cmd_extract(self) -> None:
         self._menu.unpost()
         paths = self._get_selected_paths()
-        if not paths:
+        apk_path = self._get_apk_path()
+        if not paths or not apk_path:
             return
-
-        dest_dir = filedialog.askdirectory(title="Extract to...", parent=self._tree)
-        if not dest_dir:
-            return
-
-        try:
-            extracted = self._extractor.extract(self._get_apk_path(), paths, dest_dir)
-        except Exception as e:
-            messagebox.showerror("Extract failed", str(e), parent=self._tree)
-            return
-
-        messagebox.showinfo(
-            "Extraction Complete",
-            f"Successfully extracted {len(extracted)} item(s) to:\n{dest_dir}",
-            parent=self._tree,
-        )
+        self._extract_dialog.run(apk_path, self._get_default_folder_name(), paths)
 
     def _cmd_details(self) -> None:
         self._menu.unpost()

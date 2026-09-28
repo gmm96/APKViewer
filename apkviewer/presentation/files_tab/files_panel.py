@@ -6,20 +6,22 @@ for Open / Open with / Copy / Extract to / Details.
 
 import os
 import tkinter as tk
+from collections.abc import Callable
+from functools import partial
 from tkinter import ttk
 from typing import Any
-from functools import partial
 
 from PIL import ImageTk
 
 from apkviewer.application import FileTreeFilter, FileTreeSorter
 from apkviewer.config import COLOR_FOLDER_BG, FONT_MONO_SMALL
-from apkviewer.domain.interfaces import SizeFormatter
-from apkviewer.infrastructure import ApkExtractor, HumanReadableSizeFormatter
-from apkviewer.presentation.common import AutoHideScrollbar
+from apkviewer.domain.interfaces import PlatformServices, SizeFormatter
+from apkviewer.infrastructure import ApkExtractor, HumanReadableSizeFormatter, PlatformServicesResolver
+from apkviewer.presentation.common import AutoHideScrollbar, ExtractToDialog
 from apkviewer.presentation.icons import IconLoader
 
 from .files_context_menu import FilesContextMenu
+
 
 _COLUMN_LABELS: dict[str, str] = {
     "#0": "Name",
@@ -36,16 +38,20 @@ class FilesPanel(ttk.Frame):
     def __init__(
         self,
         parent: ttk.Notebook,
+        get_default_folder_name: Callable[[], str],
         tree_filter: FileTreeFilter | None = None,
         size_formatter: SizeFormatter | None = None,
         sorter: FileTreeSorter | None = None,
         icon_loader: IconLoader | None = None,
+        platform_services: PlatformServices | None = None,
     ) -> None:
         super().__init__(parent)
         self._tree_filter: FileTreeFilter = tree_filter or FileTreeFilter()
         self._size_formatter: SizeFormatter = size_formatter or HumanReadableSizeFormatter()
         self._sorter: FileTreeSorter = sorter or FileTreeSorter()
         self._icon_loader: IconLoader = icon_loader or IconLoader()
+        self._platform_services: PlatformServices = platform_services or PlatformServicesResolver().resolve()
+        self._get_default_folder_name: Callable[[], str] = get_default_folder_name
 
         self._tree_data: dict[str, Any] = {}
         self._node_states: dict[str, bool] = {}
@@ -76,6 +82,10 @@ class FilesPanel(ttk.Frame):
             self.tree,
             self._extractor,
             lambda: self.apk_path,
+            os_file_opener=self._platform_services.create_os_file_opener(),
+            clipboard_copier=self._platform_services.create_clipboard_file_copier(),
+            extract_dialog=ExtractToDialog(self, self._extractor),
+            get_default_folder_name=self._get_default_folder_name,
             size_formatter=self._size_formatter,
             get_meta_cb=self._resolve_meta,
             icon_loader=self._icon_loader,
