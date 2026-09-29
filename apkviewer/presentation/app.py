@@ -174,7 +174,7 @@ class ApkAnalyzerApp:
         threading.Thread(target=self._analyze_in_background, args=(apk_path,), daemon=True).start()
 
     def _default_extract_folder_name(self) -> str:
-        return self._result.default_name if self._result else "app"
+        return self._result.package_name if self._result else "app"
 
     # --- Background worker (runs off the Tk main thread) ----------------------
 

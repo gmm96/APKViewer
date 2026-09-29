@@ -110,11 +110,12 @@ class AppToolbar:
             options["compound"] = tk.LEFT
         menu.add_command(**options)
 
-        self._positions[item.key] = (menu, menu.index(tk.END))
+        menu_index = menu.index(tk.END)
+        self._positions[item.key] = (menu, menu_index if menu_index is not None else 0)
         self._commands[item.key] = item.command
         self._enabled[item.key] = True
         if item.shortcut:
-            self._root.bind(item.shortcut, lambda _event, key=item.key: self._invoke(key))
+            self._root.bind(item.shortcut, lambda _event, key=item.key: self._invoke(key))  # type: ignore
 
     def _icon_for(self, item: AppToolbarItem) -> ImageTk.PhotoImage:
         if not item.icon_path:
