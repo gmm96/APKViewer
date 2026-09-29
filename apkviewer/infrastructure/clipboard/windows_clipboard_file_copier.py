@@ -3,7 +3,7 @@ Windows implementation of ClipboardFileCopier, using the CF_HDROP
 clipboard format via ctypes/user32.
 """
 
-from apkviewer.domain.interfaces import ClipboardFileCopier
+from apkviewer.domain.interfaces.clipboard_file_copier import ClipboardFileCopier
 
 
 class WindowsClipboardFileCopier(ClipboardFileCopier):

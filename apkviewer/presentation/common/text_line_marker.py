@@ -6,7 +6,8 @@ fields in the Information tab so users can mark + copy one line at a time.
 
 import tkinter as tk
 
-from apkviewer.config import COLOR_MARK_BG, MARKED_LINE_TAG
+from apkviewer.config.layout import MARKED_LINE_TAG
+from apkviewer.config.theme import COLOR_MARK_BG
 
 
 class TextLineMarker:

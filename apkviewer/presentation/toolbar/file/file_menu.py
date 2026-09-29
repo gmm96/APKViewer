@@ -10,9 +10,10 @@ from tkinter import filedialog, messagebox
 
 from PIL import Image
 
-from apkviewer.application import AppInfoSerializer, IconExtractor
+from apkviewer.application.app_info_serializer import AppInfoSerializer
+from apkviewer.application.icon_extractor import IconExtractor
 from apkviewer.domain.entities.analysis_result import AnalysisResult
-from apkviewer.presentation.common import ExtractToDialog
+from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
 
 
 class FileMenu:

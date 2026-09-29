@@ -12,7 +12,7 @@ import tkinter as tk
 from collections.abc import Sequence
 from tkinter import filedialog, messagebox
 
-from apkviewer.infrastructure import ApkExtractor
+from apkviewer.infrastructure.zip.apk_extractor import ApkExtractor
 
 
 class ExtractToDialog:

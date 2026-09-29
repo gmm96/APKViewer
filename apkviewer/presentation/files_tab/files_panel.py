@@ -13,12 +13,17 @@ from typing import Any
 
 from PIL import ImageTk
 
-from apkviewer.application import FileTreeFilter, FileTreeSorter
-from apkviewer.config import COLOR_FOLDER_BG, FONT_MONO_SMALL
-from apkviewer.domain.interfaces import PlatformServices, SizeFormatter
-from apkviewer.infrastructure import ApkExtractor, HumanReadableSizeFormatter, PlatformServicesResolver
-from apkviewer.presentation.common import AutoHideScrollbar, ExtractToDialog
-from apkviewer.presentation.icons import IconLoader
+from apkviewer.application.file_tree_filter import FileTreeFilter
+from apkviewer.application.file_tree_sorter import FileTreeSorter
+from apkviewer.config.theme import COLOR_FOLDER_BG, FONT_MONO_SMALL
+from apkviewer.domain.interfaces.platform_services import PlatformServices
+from apkviewer.domain.interfaces.size_formatter import SizeFormatter
+from apkviewer.infrastructure.zip.apk_extractor import ApkExtractor
+from apkviewer.infrastructure.formatting.human_readable_size_formatter import HumanReadableSizeFormatter
+from apkviewer.infrastructure.platforms.platform_services_resolver import PlatformServicesResolver
+from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
+from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
+from apkviewer.presentation.icons.icon_loader import IconLoader
 
 from .files_context_menu import FilesContextMenu
 

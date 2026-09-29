@@ -6,8 +6,9 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Optional
 
-from apkviewer.config import COLOR_TEXT_BG, FONT_MONO
-from apkviewer.presentation.common import AutoHideScrollbar, TextContextMenu
+from apkviewer.config.theme import COLOR_TEXT_BG, FONT_MONO
+from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
+from apkviewer.presentation.common.text_context_menu import TextContextMenu
 
 from .xml_syntax_highlighter import XmlSyntaxHighlighter
 

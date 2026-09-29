@@ -8,7 +8,8 @@ import os
 from androguard.core.apk import APK
 from PIL import Image
 
-from apkviewer.config import ANDROID_NS, DPI_SCORES, ICON_SIZE
+from apkviewer.config.android import ANDROID_NS, DPI_SCORES
+from apkviewer.config.layout import ICON_SIZE
 
 
 class IconExtractor:

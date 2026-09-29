@@ -4,7 +4,7 @@ macOS implementation of OsFileOpener, backed by the `open` command.
 
 import subprocess
 
-from apkviewer.domain.interfaces import OsFileOpener
+from apkviewer.domain.interfaces.os_file_opener import OsFileOpener
 
 
 class MacFileOpener(OsFileOpener):

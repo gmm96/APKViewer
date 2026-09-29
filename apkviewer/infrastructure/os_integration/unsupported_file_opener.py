@@ -4,7 +4,7 @@ Fallback OsFileOpener for platforms with no native "open" integration.
 
 import sys
 
-from apkviewer.domain.interfaces import OsFileOpener
+from apkviewer.domain.interfaces.os_file_opener import OsFileOpener
 
 
 class UnsupportedFileOpener(OsFileOpener):

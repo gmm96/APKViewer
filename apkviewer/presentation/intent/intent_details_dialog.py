@@ -5,8 +5,8 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from typing import Optional
 
-from apkviewer.config import FONT_MONO
-from apkviewer.presentation.common import ModalDialogPositioner
+from apkviewer.config.theme import FONT_MONO
+from apkviewer.presentation.common.modal_dialog_positioner import ModalDialogPositioner
 from .intent_action_parser import IntentActionParser
 
 

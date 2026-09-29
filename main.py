@@ -8,7 +8,7 @@ Usage:
 import sys
 import tkinter
 
-from apkviewer.presentation import ApkAnalyzerApp
+from apkviewer.presentation.app import ApkAnalyzerApp
 
 
 def main() -> None:

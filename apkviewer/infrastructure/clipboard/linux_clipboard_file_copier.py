@@ -6,7 +6,7 @@ Linux implementation of ClipboardFileCopier: tries the X11 clipboard
 import os
 import subprocess
 
-from apkviewer.domain.interfaces import ClipboardFileCopier
+from apkviewer.domain.interfaces.clipboard_file_copier import ClipboardFileCopier
 
 
 class LinuxClipboardFileCopier(ClipboardFileCopier):

@@ -19,10 +19,12 @@ from tkinter import messagebox, ttk
 
 from PIL import ImageTk
 
-from apkviewer.domain.interfaces import ClipboardFileCopier, OsFileOpener, SizeFormatter
-from apkviewer.infrastructure import ApkExtractor
-from apkviewer.presentation.common import ExtractToDialog
-from apkviewer.presentation.icons import IconLoader
+from apkviewer.domain.interfaces.clipboard_file_copier import ClipboardFileCopier
+from apkviewer.domain.interfaces.os_file_opener import OsFileOpener
+from apkviewer.domain.interfaces.size_formatter import SizeFormatter
+from apkviewer.infrastructure.zip.apk_extractor import ApkExtractor
+from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
+from apkviewer.presentation.icons.icon_loader import IconLoader
 
 from .file_details_dialog import FileDetailsDialog
 
@@ -258,7 +260,7 @@ class FilesContextMenu:
         dialog = FileDetailsDialog(self._tree)
         dialog.show(items_data, summary)
 
-    def _build_summary(self, paths: list) -> Optional[dict]:
+    def _build_summary(self, paths: list) -> dict | None:
         """Real totals (not just a count) for the multi-select Details
         popup - mirrors how file managers show "N items, totaling X" when
         several rows are selected at once."""

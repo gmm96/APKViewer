@@ -7,7 +7,7 @@ completely agnostic of file formats.
 import os
 import zipfile
 
-from apkviewer.domain.interfaces import FileDecoder
+from apkviewer.domain.interfaces.file_decoder import FileDecoder
 
 from .axml_decoder import AxmlDecoder
 

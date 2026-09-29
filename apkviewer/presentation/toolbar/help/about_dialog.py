@@ -6,8 +6,9 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Optional
 
-from apkviewer.config import FONT_TITLE, PROJECT_DESCRIPTION, PROJECT_NAME
-from apkviewer.presentation.common import ModalDialogPositioner
+from apkviewer.config.theme import FONT_TITLE
+from apkviewer.config.about import PROJECT_DESCRIPTION, PROJECT_NAME
+from apkviewer.presentation.common.modal_dialog_positioner import ModalDialogPositioner
 
 
 class AboutDialog:

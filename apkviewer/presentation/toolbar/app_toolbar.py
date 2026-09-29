@@ -14,8 +14,8 @@ from typing import Optional
 
 from PIL import Image, ImageTk
 
-from apkviewer.presentation.icons import IconLoader
-from apkviewer.presentation.viewmodels import AppToolbarItem
+from apkviewer.presentation.icons.icon_loader import IconLoader
+from apkviewer.presentation.viewmodels.app_toolbar_item import AppToolbarItem
 
 
 # A None entry renders as a separator.

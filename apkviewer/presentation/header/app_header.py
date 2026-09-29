@@ -9,8 +9,8 @@ from collections.abc import Callable
 
 from PIL import ImageTk
 
-from apkviewer.config import FONT_SUBTITLE, FONT_TITLE
-from apkviewer.presentation.icons import PlaceholderIconFactory
+from apkviewer.config.theme import FONT_SUBTITLE, FONT_TITLE
+from apkviewer.presentation.icons.placeholder_icon_factory import PlaceholderIconFactory
 
 
 class AppHeader(ttk.Frame):

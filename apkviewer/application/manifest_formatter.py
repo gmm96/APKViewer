@@ -3,10 +3,10 @@ Formats an APK's AndroidManifest.xml into pretty-printed text.
 """
 
 import os
-import xml.dom.minidom as minidom
+from xml.dom import minidom
 
-from apkviewer.domain.interfaces import XmlSerializer
-from apkviewer.infrastructure import LxmlSerializer
+from apkviewer.domain.interfaces.xml_serializer import XmlSerializer
+from apkviewer.infrastructure.xml.lxml_serializer import LxmlSerializer
 
 
 class ManifestFormatter:

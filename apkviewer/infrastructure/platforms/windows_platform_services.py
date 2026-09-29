@@ -2,12 +2,10 @@
 Windows implementations of the OS-dependent services.
 """
 
-from apkviewer.domain.interfaces import (
-    ClipboardFileCopier,
-    OsFileOpener,
-    PlatformServices,
-    UrlOpener
-)
+from apkviewer.domain.interfaces.clipboard_file_copier import ClipboardFileCopier
+from apkviewer.domain.interfaces.os_file_opener import OsFileOpener
+from apkviewer.domain.interfaces.platform_services import PlatformServices
+from apkviewer.domain.interfaces.url_opener import UrlOpener
 from apkviewer.infrastructure.clipboard.windows_clipboard_file_copier import WindowsClipboardFileCopier
 from apkviewer.infrastructure.os_integration.windows_file_opener import WindowsFileOpener
 from apkviewer.infrastructure.url.webbrowser_url_opener import WebBrowserUrlOpener

@@ -7,15 +7,14 @@ without touching real APK files.
 """
 
 from apkviewer.domain.entities.analysis_result import AnalysisResult
-from apkviewer.domain.interfaces import AnalysisSectionExtractor
-from apkviewer.infrastructure import ApkLoader
+from apkviewer.domain.interfaces.analysis_section_extractor import AnalysisSectionExtractor
+from apkviewer.infrastructure.androguard.apk_loader import ApkLoader
 
-from .extractors import (
-    AppInfoExtractor,
-    ComponentsExtractor,
-    SecurityInfoExtractor,
-    TrackerDetector
-)
+from .extractors.app_info_extractor import AppInfoExtractor
+from .extractors.components_extractor import ComponentsExtractor
+from .extractors.security_info_extractor import SecurityInfoExtractor
+from .extractors.tracker_detector import TrackerDetector
+
 from .icon_extractor import IconExtractor
 
 

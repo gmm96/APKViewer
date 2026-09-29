@@ -11,27 +11,28 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from typing import Any
 
-from apkviewer.application import (
-    AppInfoSerializer,
-    ApkAnalyzer,
-    FileTreeBuilder,
-    IconExtractor,
-    ManifestFormatter,
-)
+from apkviewer.application.app_info_serializer import AppInfoSerializer
+from apkviewer.application.apk_analyzer import ApkAnalyzer
+from apkviewer.application.file_tree_builder import FileTreeBuilder
+from apkviewer.application.icon_extractor import IconExtractor
+from apkviewer.application.manifest_formatter import ManifestFormatter
 from apkviewer.domain.entities.analysis_result import AnalysisResult
-from apkviewer.domain.interfaces import PlatformServices
-from apkviewer.infrastructure import ApkExtractor, PlatformServicesResolver
-from apkviewer.presentation.toolbar.help import HelpMenu
-from apkviewer.presentation.toolbar.file import FileMenu
-from apkviewer.presentation.common import ExtractToDialog, StatusBar, TextContextMenu, TkWindowHandleProvider
-from apkviewer.presentation.files_tab import FilesPanel
-from apkviewer.presentation.header import AppHeader
-from apkviewer.presentation.icons import IconLoader
-from apkviewer.presentation.info_tab import InfoPanel
-from apkviewer.presentation.intent import IntentDetailsDialog
-from apkviewer.presentation.manifest_tab import ManifestPanel
-from apkviewer.presentation.toolbar import AppToolbar
-from apkviewer.presentation.viewmodels import AppToolbarItem
+from apkviewer.domain.interfaces.platform_services import PlatformServices
+from apkviewer.infrastructure.zip.apk_extractor import ApkExtractor
+from apkviewer.infrastructure.platforms.platform_services_resolver import PlatformServicesResolver
+from apkviewer.presentation.toolbar.help.help_menu import HelpMenu
+from apkviewer.presentation.toolbar.file.file_menu import FileMenu
+from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
+from apkviewer.presentation.common.status_bar import StatusBar
+from apkviewer.presentation.common.text_context_menu import TextContextMenu
+from apkviewer.presentation.files_tab.files_panel import FilesPanel
+from apkviewer.presentation.header.app_header import AppHeader
+from apkviewer.presentation.icons.icon_loader import IconLoader
+from apkviewer.presentation.info_tab.info_panel import InfoPanel
+from apkviewer.presentation.intent.intent_details_dialog import IntentDetailsDialog
+from apkviewer.presentation.manifest_tab.manifest_panel import ManifestPanel
+from apkviewer.presentation.toolbar.app_toolbar import AppToolbar
+from apkviewer.presentation.viewmodels.app_toolbar_item import AppToolbarItem
 
 _ICONS_DIR = "assets/icons/outline"
 
@@ -58,9 +59,7 @@ class ApkAnalyzerApp:
         self.root.geometry("1000x750")
         self.root.protocol("WM_DELETE_WINDOW", self.exit_app)
 
-        self._platform_services: PlatformServices = platform_services or PlatformServicesResolver().resolve(
-            TkWindowHandleProvider(root)
-        )
+        self._platform_services: PlatformServices = platform_services or PlatformServicesResolver().resolve()
         self._icon_extractor: IconExtractor = icon_extractor or IconExtractor()
         self._analyzer: ApkAnalyzer = analyzer or ApkAnalyzer(icon_extractor=self._icon_extractor)
         self._manifest_formatter: ManifestFormatter = manifest_formatter or ManifestFormatter()

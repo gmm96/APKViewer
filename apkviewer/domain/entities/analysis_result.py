@@ -4,6 +4,7 @@ Everything the presentation layer needs to render after analyzing one APK.
 
 from dataclasses import dataclass
 from typing import Any
+
 from androguard.core.apk import APK
 from PIL import Image
 

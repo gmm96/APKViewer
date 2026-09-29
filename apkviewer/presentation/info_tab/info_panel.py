@@ -8,8 +8,11 @@ from collections.abc import Callable
 from tkinter import ttk
 from typing import Any
 
-from apkviewer.config import COLOR_TEXT_BG, FONT_MONO_SMALL, LABEL_WIDTH, MIN_LIST_LINES
-from apkviewer.presentation.common import AutoHideScrollbar, TextContextMenu, TextLineMarker
+from apkviewer.config.theme import COLOR_TEXT_BG, FONT_MONO_SMALL
+from apkviewer.config.layout import LABEL_WIDTH, MIN_LIST_LINES
+from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
+from apkviewer.presentation.common.text_context_menu import TextContextMenu
+from apkviewer.presentation.common.text_line_marker import TextLineMarker
 from apkviewer.presentation.common.scrollable_frame import ScrollableFrame
 
 

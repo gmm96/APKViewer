@@ -6,10 +6,9 @@ and the exported intent-filter actions they respond to.
 from typing import Any
 
 from androguard.core.apk import APK
-from lxml import etree
 
-from apkviewer.config import ANDROID_NS
-from apkviewer.domain.interfaces import AnalysisSectionExtractor
+from apkviewer.config.android import ANDROID_NS
+from apkviewer.domain.interfaces.analysis_section_extractor import AnalysisSectionExtractor
 
 
 class ComponentsExtractor(AnalysisSectionExtractor):

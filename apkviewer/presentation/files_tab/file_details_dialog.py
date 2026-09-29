@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Optional
 
-from apkviewer.presentation.common import ModalDialogPositioner
+from apkviewer.presentation.common.modal_dialog_positioner import ModalDialogPositioner
 
 
 class FileDetailsDialog:
