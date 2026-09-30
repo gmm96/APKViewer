@@ -5,9 +5,9 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from typing import Optional
 
-from apkviewer.config.theme import FONT_MONO
+from apkviewer.domain.entities.intent_action_format import IntentActionFormat
 from apkviewer.presentation.common.modal_dialog_positioner import ModalDialogPositioner
-from .intent_action_parser import IntentActionParser
+from apkviewer.presentation.config.theme import FONT_MONO
 
 
 class IntentDetailsDialog:
@@ -16,23 +16,21 @@ class IntentDetailsDialog:
     def __init__(
         self,
         parent: tk.Misc,
-        parser: Optional[IntentActionParser] = None,
         positioner: Optional[ModalDialogPositioner] = None,
     ) -> None:
         self._parent: tk.Misc = parent
-        self._parser: IntentActionParser = parser or IntentActionParser()
         self._positioner: ModalDialogPositioner = positioner or ModalDialogPositioner()
 
     def open(self, line_text: str) -> None:
         try:
-            fields = self._parser.parse(line_text)
+            fields = IntentActionFormat.parse(line_text)
             dialog = self._build_dialog(fields)
             self._positioner.center_on_parent(dialog, self._parent)
             self._positioner.show_as_modal(dialog)
         except Exception as exc:
             messagebox.showerror("Parse Error", f"Could not load intent details:\n{exc}")
 
-    def _build_dialog(self, fields: dict) -> tk.Toplevel:
+    def _build_dialog(self, fields: dict[str, str]) -> tk.Toplevel:
         dialog = tk.Toplevel(self._parent)
         dialog.title("Intent Details")
         dialog.minsize(550, 150)

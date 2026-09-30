@@ -1,21 +1,26 @@
 """
-Everything the presentation layer needs to render after analyzing one APK.
+Everything a front end needs after analyzing one APK. It only holds plain
+data (no third-party types), so any presentation layer can consume it.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from androguard.core.apk import APK
-from PIL import Image
+from apkviewer.domain.entities.file_node import FileNode
 
 
-@dataclass
+@dataclass(frozen=True)
 class AnalysisResult:
-    apk: APK
-    icon: Image.Image | None
-    sections: dict[str, dict[str, Any]]
+    apk_path: str
+    package_name: str
+    app_name: str
+    icon_png: bytes | None
+    sections: Mapping[str, Mapping[str, Any]]
+    manifest_xml: str
+    file_tree: FileNode
 
     @property
-    def package_name(self) -> str:
-        """Package name of the app, or "app" when the APK does not declare one."""
-        return self.apk.get_package() or "app"
+    def default_name(self) -> str:
+        """Name suggested for exported files/folders ("app" when the APK declares no package)."""
+        return self.package_name or "app"

@@ -4,16 +4,17 @@ components, trackers) as read-only entry fields and scrollable list boxes.
 """
 
 import tkinter as tk
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from tkinter import ttk
 from typing import Any
 
-from apkviewer.config.theme import COLOR_TEXT_BG, FONT_MONO_SMALL
-from apkviewer.config.layout import LABEL_WIDTH, MIN_LIST_LINES
+from apkviewer.domain.entities.analysis_labels import FIELD_CERTIFICATES, FIELD_INTENT_ACTIONS
 from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
+from apkviewer.presentation.common.scrollable_frame import ScrollableFrame
 from apkviewer.presentation.common.text_context_menu import TextContextMenu
 from apkviewer.presentation.common.text_line_marker import TextLineMarker
-from apkviewer.presentation.common.scrollable_frame import ScrollableFrame
+from apkviewer.presentation.config.layout import LABEL_WIDTH, MIN_LIST_LINES
+from apkviewer.presentation.config.theme import COLOR_TEXT_BG, FONT_MONO_SMALL
 
 
 class InfoPanel(ttk.Frame):
@@ -36,7 +37,7 @@ class InfoPanel(ttk.Frame):
         for widget in self.scroll_frame.inner_frame.winfo_children():
             widget.destroy()
 
-    def render(self, sections: dict[str, Any]) -> None:
+    def render(self, sections: Mapping[str, Mapping[str, Any]]) -> None:
         self.clear()
         container = self.scroll_frame.inner_frame
         container.columnconfigure(0, weight=1)
@@ -98,12 +99,12 @@ class InfoPanel(ttk.Frame):
         text_widget.configure(state="disabled")
         self._line_marker.bind(text_widget)
         self._context_menu.attach(text_widget)
-        if label_text == "Intent Actions":
+        if label_text == FIELD_INTENT_ACTIONS:
             text_widget.bind("<Double-Button-1>", self._handle_intent_double_click)
 
     @staticmethod
     def _build_display_text(label_text: str, items: list) -> tuple[str, int]:
-        separator = "\n\n" if "Certificates" in label_text else "\n"
+        separator = "\n\n" if label_text == FIELD_CERTIFICATES else "\n"
         display_text = separator.join(items) if items else "None found"
 
         line_count = max(display_text.count("\n") + 1, MIN_LIST_LINES)

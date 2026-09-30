@@ -7,8 +7,10 @@ from typing import Any
 
 from androguard.core.apk import APK
 
-from apkviewer.config.android import ANDROID_NS
-from apkviewer.domain.interfaces.analysis_section_extractor import AnalysisSectionExtractor
+from apkviewer.domain.entities.analysis_labels import FIELD_INTENT_ACTIONS
+from apkviewer.domain.entities.intent_action_format import IntentActionFormat
+from apkviewer.infrastructure.androguard.analysis_section_extractor import AnalysisSectionExtractor
+from apkviewer.infrastructure.androguard.config.android import ANDROID_NS
 
 
 class ComponentsExtractor(AnalysisSectionExtractor):
@@ -18,7 +20,7 @@ class ComponentsExtractor(AnalysisSectionExtractor):
             "Services": sorted(apk.get_services()),
             "Receivers": sorted(apk.get_receivers()),
             "Providers": sorted(apk.get_providers()),
-            "Intent Actions": sorted(self._extract_intent_actions(apk)),
+            FIELD_INTENT_ACTIONS: sorted(self._extract_intent_actions(apk)),
         }
 
     def _extract_intent_actions(self, apk: APK) -> list[str]:
@@ -68,13 +70,14 @@ class ComponentsExtractor(AnalysisSectionExtractor):
             elif node.tag == "category":
                 cat = node.get(f"{ANDROID_NS}name")
                 if cat:
-                    extras.append(f"category='{cat.replace('android.intent.category.', '')}'")
+                    extras.append(
+                        IntentActionFormat.format_extra("category", cat.replace("android.intent.category.", ""))
+                    )
             elif node.tag == "data":
                 extras.extend(self._data_node_extras(node))
 
-        extras.append(f"{comp_type}='{comp_name}'")
-        extras_str = ", ".join(extras)
-        return {f"{action} ( {extras_str} )" for action in action_names}
+        extras.append(IntentActionFormat.format_extra(comp_type, comp_name))
+        return {IntentActionFormat.format(action, extras) for action in action_names}
 
     @staticmethod
     def _data_node_extras(node) -> list[str]:
@@ -83,5 +86,5 @@ class ComponentsExtractor(AnalysisSectionExtractor):
         for attr in attr_labels:
             value = node.get(f"{ANDROID_NS}{attr}")
             if value:
-                extras.append(f"{attr}='{value}'")
+                extras.append(IntentActionFormat.format_extra(attr, value))
         return extras

@@ -4,30 +4,29 @@ live text filter, column-header sorting, and a right-click context menu
 for Open / Open with / Copy / Extract to / Details.
 """
 
-import os
 import tkinter as tk
 from collections.abc import Callable
+from datetime import datetime
 from functools import partial
 from tkinter import ttk
-from typing import Any
 
 from PIL import ImageTk
 
+from apkviewer.application.entry_previewer import EntryPreviewer
 from apkviewer.application.file_tree_filter import FileTreeFilter
-from apkviewer.application.file_tree_sorter import FileTreeSorter
-from apkviewer.config.theme import COLOR_FOLDER_BG, FONT_MONO_SMALL
-from apkviewer.domain.interfaces.platform_services import PlatformServices
-from apkviewer.domain.interfaces.size_formatter import SizeFormatter
-from apkviewer.infrastructure.zip.apk_extractor import ApkExtractor
-from apkviewer.infrastructure.formatting.human_readable_size_formatter import HumanReadableSizeFormatter
-from apkviewer.infrastructure.platforms.platform_services_resolver import PlatformServicesResolver
+from apkviewer.application.file_tree_sorter import FileSortKey, FileTreeSorter
+from apkviewer.domain.entities.file_node import FileNode
 from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
 from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
+from apkviewer.presentation.config.theme import COLOR_FOLDER_BG, FONT_MONO_SMALL
+from apkviewer.presentation.formatting.human_readable_size_formatter import HumanReadableSizeFormatter
+from apkviewer.presentation.formatting.size_formatter import SizeFormatter
 from apkviewer.presentation.icons.icon_loader import IconLoader
 
 from .files_context_menu import FilesContextMenu
 
 
+# Tk column identifier -> label shown in its heading.
 _COLUMN_LABELS: dict[str, str] = {
     "#0": "Name",
     "type": "Type",
@@ -35,8 +34,17 @@ _COLUMN_LABELS: dict[str, str] = {
     "compressed": "Compressed",
     "modified": "Modified",
 }
+# Tk column identifier -> the (toolkit-agnostic) key the sorter understands.
+_COLUMN_SORT_KEYS: dict[str, FileSortKey] = {
+    "#0": FileSortKey.NAME,
+    "type": FileSortKey.TYPE,
+    "size": FileSortKey.SIZE,
+    "compressed": FileSortKey.COMPRESSED,
+    "modified": FileSortKey.MODIFIED,
+}
 ARROW_UP: str = "⏶"
 ARROW_DOWN: str = "⏷"
+_DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 
 
 class FilesPanel(ttk.Frame):
@@ -44,24 +52,23 @@ class FilesPanel(ttk.Frame):
         self,
         parent: ttk.Notebook,
         get_default_folder_name: Callable[[], str],
+        extract_dialog: ExtractToDialog,
+        entry_previewer: EntryPreviewer,
         tree_filter: FileTreeFilter | None = None,
         size_formatter: SizeFormatter | None = None,
         sorter: FileTreeSorter | None = None,
         icon_loader: IconLoader | None = None,
-        platform_services: PlatformServices | None = None,
     ) -> None:
         super().__init__(parent)
         self._tree_filter: FileTreeFilter = tree_filter or FileTreeFilter()
         self._size_formatter: SizeFormatter = size_formatter or HumanReadableSizeFormatter()
         self._sorter: FileTreeSorter = sorter or FileTreeSorter()
         self._icon_loader: IconLoader = icon_loader or IconLoader()
-        self._platform_services: PlatformServices = platform_services or PlatformServicesResolver().resolve()
-        self._get_default_folder_name: Callable[[], str] = get_default_folder_name
+        self._entry_previewer: EntryPreviewer = entry_previewer
 
-        self._tree_data: dict[str, Any] = {}
+        self._root_node: FileNode = FileNode.create_root()
         self._node_states: dict[str, bool] = {}
         self.apk_path: str | None = None
-        self._extractor: ApkExtractor = ApkExtractor()
 
         self._icon_file: ImageTk.PhotoImage = self._icon_loader.load_icon(
             "assets/icons/color/file.png",
@@ -85,14 +92,12 @@ class FilesPanel(ttk.Frame):
 
         self._context_menu: FilesContextMenu = FilesContextMenu(
             self.tree,
-            self._extractor,
-            lambda: self.apk_path,
-            os_file_opener=self._platform_services.create_os_file_opener(),
-            clipboard_copier=self._platform_services.create_clipboard_file_copier(),
-            extract_dialog=ExtractToDialog(self, self._extractor),
-            get_default_folder_name=self._get_default_folder_name,
+            entry_previewer=entry_previewer,
+            extract_dialog=extract_dialog,
+            get_apk_path=lambda: self.apk_path,
+            get_default_folder_name=get_default_folder_name,
+            get_node=self._root_node_find,
             size_formatter=self._size_formatter,
-            get_meta_cb=self._resolve_meta,
             icon_loader=self._icon_loader,
         )
 
@@ -128,51 +133,42 @@ class FilesPanel(ttk.Frame):
 
     # --- Public API -------------------------------------------------------
 
-    def render(self, apk_path: str, tree_data: dict[str, dict[str, Any]]) -> None:
+    def render(self, apk_path: str, file_tree: FileNode) -> None:
         self.apk_path = apk_path
-        self._tree_data = tree_data
+        self._root_node = file_tree
         self._node_states.clear()
-        self._context_menu.reset_workspace()  # a new APK invalidates any previous extraction
+        self._entry_previewer.reset()  # a new APK invalidates any previous extraction
         self.filter_entry.delete(0, tk.END)
         self.tree.delete(*self.tree.get_children())
-        self._populate(self._tree_data)
+        self._populate(self._root_node)
 
     def clear(self) -> None:
         self.apk_path = None
         self.tree.delete(*self.tree.get_children())
-        self._tree_data = {}
+        self._root_node = FileNode.create_root()
         self._node_states.clear()
 
     def cleanup(self) -> None:
         """Releases any temporary files extracted for Open/Open with/Copy. Call on app shutdown."""
-        self._context_menu.reset_workspace()
+        self._entry_previewer.dispose()
 
-    def _resolve_meta(self, iid: str) -> dict[str, Any]:
-        """Looks up an item's raw metadata (byte counts, __is_file__, ...)
-        by walking the nested tree dict along `iid`'s path components.
-        Kept as a lookup into the existing tree_data rather than a separate
-        flat cache, so there's only one place that owns this data."""
-        node = self._tree_data
-        meta = None
-        for part in iid.split("/"):
-            meta = node.get(part)
-            if meta is None:
-                return {}
-            node = meta.get("__children__", {})
-        return meta or {}
+    def _root_node_find(self, iid: str) -> FileNode | None:
+        # Looked up through a method (not a bound `self._root_node.find`)
+        # because render()/clear() replace the root node.
+        return self._root_node.find(iid)
 
     # --- Sorting ---------------------------------------------------------
 
     def _sort_by(self, column: str) -> None:
-        self._sorter.toggle(column)
+        self._sorter.toggle(_COLUMN_SORT_KEYS[column])
         self._update_heading_labels()
         self._apply_filter()
 
     def _update_heading_labels(self) -> None:
         arrow = f"  {ARROW_UP}" if self._sorter.reverse else f"  {ARROW_DOWN}"
         for column, label in _COLUMN_LABELS.items():
-            text = label + (arrow if column == self._sorter.column else "")
-            self.tree.heading(column, text=text)
+            is_sorted = _COLUMN_SORT_KEYS[column] == self._sorter.key
+            self.tree.heading(column, text=label + (arrow if is_sorted else ""))
 
     # --- Filtering / rendering ----------------------------------------------
 
@@ -185,41 +181,38 @@ class FilesPanel(ttk.Frame):
         query = self.filter_entry.get()
         self._save_tree_state()
         self.tree.delete(*self.tree.get_children())
-        self._populate(self._tree_filter.filter(self._tree_data, query))
+        self._populate(self._tree_filter.filter(self._root_node, query))
 
-    def _populate(self, node_dict: dict[str, Any], parent_iid: str = "") -> None:
-        entries = self._sorter.sorted_entries(node_dict)
+    def _populate(self, node: FileNode, parent_iid: str = "") -> None:
+        for child in self._sorter.sorted_children(node):
+            size_str = self._size_formatter.format(child.size)
+            compressed_str = self._size_formatter.format(child.compressed_size)
+            modified_str = self._format_modified(child.modified)
 
-        for name, meta in entries:
-            iid = f"{parent_iid}/{name}" if parent_iid else name
-
-            size_str = self._size_formatter.format(meta.get("__size__", 0))
-            compressed_str = self._size_formatter.format(meta.get("__compressed__", 0))
-            modified_str = meta.get("__modified__", "")
-
-            if meta.get("__is_file__", False):
-                ext = os.path.splitext(name)[1].lstrip(".").upper()
-                type_label = f"{ext} File" if ext else "File"
+            if child.is_file:
+                type_label = f"{child.extension} File" if child.extension else "File"
                 self.tree.insert(
                     parent_iid,
                     tk.END,
-                    iid=iid,
-                    text=name,
+                    iid=child.path,
+                    text=child.name,
                     image=self._icon_file,
                     values=(type_label, size_str, compressed_str, modified_str),
                     tags=("file",),
                 )
             else:
-                child_count = len(meta.get("__children__", {}))
-                is_open = self._node_states.get(iid, True)
                 self.tree.insert(
                     parent_iid,
                     tk.END,
-                    iid=iid,
-                    text=name,
+                    iid=child.path,
+                    text=child.name,
                     image=self._icon_folder,
-                    values=(f"Directory ({child_count})", size_str, compressed_str, modified_str),
-                    open=is_open,
+                    values=(f"Directory ({len(child.children)})", size_str, compressed_str, modified_str),
+                    open=self._node_states.get(child.path, True),
                     tags=("folder",),
                 )
-                self._populate(meta.get("__children__", {}), iid)
+                self._populate(child, child.path)
+
+    @staticmethod
+    def _format_modified(modified: datetime | None) -> str:
+        return modified.strftime(_DATE_FORMAT) if modified is not None else ""

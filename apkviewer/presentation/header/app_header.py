@@ -2,14 +2,16 @@
 Top header: app icon, name/package labels and the "Load APK" button.
 """
 
+import io
 import tkinter as tk
 from tkinter import ttk
 from typing import Optional
 from collections.abc import Callable
 
-from PIL import ImageTk
+from PIL import Image, ImageTk
 
-from apkviewer.config.theme import FONT_SUBTITLE, FONT_TITLE
+from apkviewer.presentation.config.layout import ICON_SIZE
+from apkviewer.presentation.config.theme import FONT_SUBTITLE, FONT_TITLE
 from apkviewer.presentation.icons.placeholder_icon_factory import PlaceholderIconFactory
 
 
@@ -60,10 +62,22 @@ class AppHeader(ttk.Frame):
     def set_loading_enabled(self, enabled: bool) -> None:
         self.load_button.config(state=tk.NORMAL if enabled else tk.DISABLED)
 
-    def show_result(self, app_name: str, package_name: str, icon_image=None) -> None:
-        if icon_image is not None:
-            self._current_icon = ImageTk.PhotoImage(icon_image)
+    def show_result(self, app_name: str, package_name: str, icon_png: bytes | None = None) -> None:
+        thumbnail = self._create_thumbnail(icon_png)
+        if thumbnail is not None:
+            self._current_icon = thumbnail
             self.icon_label.config(image=self._current_icon)
 
         self.name_label.config(text=app_name or "Unknown App")
         self.package_label.config(text=package_name or "Unknown Package")
+
+    @staticmethod
+    def _create_thumbnail(icon_png: bytes | None) -> Optional[ImageTk.PhotoImage]:
+        """Scale the full-resolution icon to the header size; None if it can't be decoded."""
+        if icon_png is None:
+            return None
+        try:
+            image = Image.open(io.BytesIO(icon_png)).resize(ICON_SIZE, Image.Resampling.LANCZOS)
+        except (OSError, ValueError):
+            return None
+        return ImageTk.PhotoImage(image)

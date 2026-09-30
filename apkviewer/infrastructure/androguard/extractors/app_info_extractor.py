@@ -6,7 +6,7 @@ from typing import Any
 
 from androguard.core.apk import APK
 
-from apkviewer.domain.interfaces.analysis_section_extractor import AnalysisSectionExtractor
+from apkviewer.infrastructure.androguard.analysis_section_extractor import AnalysisSectionExtractor
 
 
 class AppInfoExtractor(AnalysisSectionExtractor):

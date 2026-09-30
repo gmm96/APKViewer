@@ -1,6 +1,6 @@
 """
-Port for a pluggable per-file decoder used while extracting entries from
-an APK's zip archive (e.g. decoding Android Binary XML into plain XML).
+Contract for a pluggable per-file decoder used while extracting entries
+from an APK's zip archive (e.g. decoding Android Binary XML into plain XML).
 """
 
 from abc import ABC, abstractmethod

@@ -1,27 +1,23 @@
 """
 Main application window: wires together the header, status bar, tabs and
-the background analysis pipeline. This is the composition root for the
-whole UI - every non-trivial dependency is created (or accepted) here and
-handed down to the collaborators that need it.
+the background analysis. It is the composition root of the *presentation*
+layer only: every use case and platform service it needs is handed in
+from outside (see apkviewer.composition_root), so this layer never
+imports the infrastructure layer.
 """
 
 import os
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from typing import Any
 
-from apkviewer.application.app_info_serializer import AppInfoSerializer
-from apkviewer.application.apk_analyzer import ApkAnalyzer
-from apkviewer.application.file_tree_builder import FileTreeBuilder
-from apkviewer.application.icon_extractor import IconExtractor
-from apkviewer.application.manifest_formatter import ManifestFormatter
+from apkviewer.application.analyze_apk import AnalyzeApk
+from apkviewer.application.entry_previewer import EntryPreviewer
+from apkviewer.application.export_app_info import ExportAppInfo
+from apkviewer.application.export_icon import ExportIcon
+from apkviewer.application.extract_apk_entries import ExtractApkEntries
 from apkviewer.domain.entities.analysis_result import AnalysisResult
-from apkviewer.domain.interfaces.platform_services import PlatformServices
-from apkviewer.infrastructure.zip.apk_extractor import ApkExtractor
-from apkviewer.infrastructure.platforms.platform_services_resolver import PlatformServicesResolver
-from apkviewer.presentation.toolbar.help.help_menu import HelpMenu
-from apkviewer.presentation.toolbar.file.file_menu import FileMenu
+from apkviewer.domain.interfaces.url_opener import UrlOpener
 from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
 from apkviewer.presentation.common.status_bar import StatusBar
 from apkviewer.presentation.common.text_context_menu import TextContextMenu
@@ -32,6 +28,8 @@ from apkviewer.presentation.info_tab.info_panel import InfoPanel
 from apkviewer.presentation.intent.intent_details_dialog import IntentDetailsDialog
 from apkviewer.presentation.manifest_tab.manifest_panel import ManifestPanel
 from apkviewer.presentation.toolbar.app_toolbar import AppToolbar
+from apkviewer.presentation.toolbar.file.file_menu import FileMenu
+from apkviewer.presentation.toolbar.help.help_menu import HelpMenu
 from apkviewer.presentation.viewmodels.app_toolbar_item import AppToolbarItem
 
 _ICONS_DIR = "assets/icons/outline"
@@ -44,44 +42,36 @@ class ApkAnalyzerApp:
     def __init__(
         self,
         root: tk.Tk,
-        analyzer: ApkAnalyzer | None = None,
-        manifest_formatter: ManifestFormatter | None = None,
-        file_tree_builder: FileTreeBuilder | None = None,
+        analyze_apk: AnalyzeApk,
+        extract_entries: ExtractApkEntries,
+        entry_previewer: EntryPreviewer,
+        export_app_info: ExportAppInfo,
+        export_icon: ExportIcon,
+        url_opener: UrlOpener,
         icon_loader: IconLoader | None = None,
-        icon_extractor: IconExtractor | None = None,
-        info_serializer: AppInfoSerializer | None = None,
-        file_menu: FileMenu | None = None,
-        help_menu: HelpMenu | None = None,
-        platform_services: PlatformServices | None = None,
     ) -> None:
         self.root: tk.Tk = root
         self.root.title("APKViewer")
         self.root.geometry("1000x750")
         self.root.protocol("WM_DELETE_WINDOW", self.exit_app)
 
-        self._platform_services: PlatformServices = platform_services or PlatformServicesResolver().resolve()
-        self._icon_extractor: IconExtractor = icon_extractor or IconExtractor()
-        self._analyzer: ApkAnalyzer = analyzer or ApkAnalyzer(icon_extractor=self._icon_extractor)
-        self._manifest_formatter: ManifestFormatter = manifest_formatter or ManifestFormatter()
-        self._file_tree_builder: FileTreeBuilder = file_tree_builder or FileTreeBuilder()
+        self._analyze_apk: AnalyzeApk = analyze_apk
+        self._entry_previewer: EntryPreviewer = entry_previewer
         self._icon_loader: IconLoader = icon_loader or IconLoader()
 
-        # State of the APK currently shown (None while nothing is loaded).
-        self._apk_path: str | None = None
+        # The analysis currently shown (None while nothing is loaded).
         self._result: AnalysisResult | None = None
 
-        self._export_actions: FileMenu = file_menu or FileMenu(
+        extract_dialog = ExtractToDialog(root, extract_entries)
+        self._extract_dialog: ExtractToDialog = extract_dialog
+        self._file_actions: FileMenu = FileMenu(
             parent=root,
-            extract_dialog=ExtractToDialog(root, ApkExtractor()),
-            icon_extractor=self._icon_extractor,
-            info_serializer=info_serializer or AppInfoSerializer(),
-            get_apk_path=lambda: self._apk_path,
+            extract_dialog=extract_dialog,
+            export_app_info=export_app_info,
+            export_icon=export_icon,
             get_result=lambda: self._result,
         )
-        self._help_actions: HelpMenu = help_menu or HelpMenu(
-            root,
-            url_opener=self._platform_services.create_url_opener(),
-        )
+        self._help_actions: HelpMenu = HelpMenu(root, url_opener=url_opener)
 
         self._configure_style()
         self.context_menu: TextContextMenu = TextContextMenu(root)
@@ -114,14 +104,15 @@ class ApkAnalyzerApp:
         notebook.add(self.manifest_panel, text="Manifest")
         self.files_panel: FilesPanel = FilesPanel(
             notebook,
-            icon_loader=self._icon_loader,
-            platform_services=self._platform_services,
             get_default_folder_name=self._default_extract_folder_name,
+            extract_dialog=self._extract_dialog,
+            entry_previewer=self._entry_previewer,
+            icon_loader=self._icon_loader,
         )
         notebook.add(self.files_panel, text="Files")
 
     def _build_menu(self) -> None:
-        export, help_ = self._export_actions, self._help_actions
+        export, help_ = self._file_actions, self._help_actions
         self.menu_bar: AppToolbar = AppToolbar(
             self.root,
             {
@@ -162,7 +153,6 @@ class ApkAnalyzerApp:
         if not os.path.exists(apk_path):
             messagebox.showerror("Error", f"File not found:\n{apk_path}")
             return
-        self._apk_path = None
         self._result = None
         self.menu_bar.set_enabled(self._ANALYSIS_DEPENDENT_ITEMS, False)
         self._set_status(f"Analyzing: {os.path.basename(apk_path)}... (Please wait)", "blue")
@@ -174,37 +164,29 @@ class ApkAnalyzerApp:
         threading.Thread(target=self._analyze_in_background, args=(apk_path,), daemon=True).start()
 
     def _default_extract_folder_name(self) -> str:
-        return self._result.package_name if self._result else "app"
+        return self._result.default_name if self._result else "app"
 
     # --- Background worker (runs off the Tk main thread) ----------------------
 
     def _analyze_in_background(self, apk_path: str) -> None:
         try:
-            result = self._analyzer.analyze(apk_path)
-            manifest_xml = self._manifest_formatter.format(result.apk)
-            file_tree = self._file_tree_builder.build(apk_path)
-            self.root.after(
-                0,
-                lambda: self._render_result(
-                    apk_path,
-                    result,
-                    manifest_xml,
-                    file_tree
-                )
-            )
-            self._set_status("Analysis completed successfully.", "green")
+            result = self._analyze_apk.execute(apk_path)
         except Exception as exc:
-            self.root.after(
-                0,
-                lambda: messagebox.showerror(
-                    "Error",
-                    f"An error occurred while analyzing the APK:\n{exc}"
-                )
-            )
-            self.root.after(0, self.header.show_error)
-            self._set_status("Analysis failed.", "red")
+            # `exc` is unbound once the except block ends, so keep its text.
+            self._report_failure(str(exc))
+        else:
+            self.root.after(0, lambda: self._render_result(result))
+            self._set_status("Analysis completed successfully.", "green")
         finally:
             self.root.after(0, lambda: self._set_loading(False))
+
+    def _report_failure(self, message: str) -> None:
+        self.root.after(
+            0,
+            lambda: messagebox.showerror("Error", f"An error occurred while analyzing the APK:\n{message}"),
+        )
+        self.root.after(0, self.header.show_error)
+        self._set_status("Analysis failed.", "red")
 
     # --- UI updates (must run on the Tk main thread) ---------------------------
 
@@ -215,23 +197,14 @@ class ApkAnalyzerApp:
         self.header.set_loading_enabled(not loading)
         self.menu_bar.set_enabled(("load_apk",), not loading)
 
-    def _render_result(
-            self,
-            apk_path: str,
-            result: AnalysisResult,
-            manifest_xml: str,
-            file_tree: dict[str, dict[str, Any]]
-        ) -> None:
-        self._apk_path = apk_path
+    def _render_result(self, result: AnalysisResult) -> None:
         self._result = result
-
-        app_info = result.sections.get("App Information", {})
         self.header.show_result(
-            app_name=app_info.get("App name") or "",
-            package_name=app_info.get("Package name") or "",
-            icon_image=result.icon,
+            app_name=result.app_name,
+            package_name=result.package_name,
+            icon_png=result.icon_png,
         )
         self.info_panel.render(result.sections)
-        self.manifest_panel.render(manifest_xml)
-        self.files_panel.render(apk_path, file_tree)
+        self.manifest_panel.render(result.manifest_xml)
+        self.files_panel.render(result.apk_path, result.file_tree)
         self.menu_bar.set_enabled(self._ANALYSIS_DEPENDENT_ITEMS, True)

@@ -5,7 +5,7 @@ Minimal XML syntax highlighter applied to the Manifest.xml text view.
 import re
 import tkinter as tk
 
-from apkviewer.config.theme import COLOR_XML_ATTR, COLOR_XML_COMMENT, COLOR_XML_TAG, COLOR_XML_VALUE, FONT_MONO_SMALL_ITALIC
+from apkviewer.presentation.config.theme import COLOR_XML_ATTR, COLOR_XML_COMMENT, COLOR_XML_TAG, COLOR_XML_VALUE, FONT_MONO_SMALL_ITALIC
 
 
 class XmlSyntaxHighlighter:

@@ -7,7 +7,7 @@ and don't reliably get Tk's default copy binding.
 
 import tkinter as tk
 
-from apkviewer.config.layout import MARKED_LINE_TAG
+from apkviewer.presentation.config.layout import MARKED_LINE_TAG
 
 
 class TextContextMenu:

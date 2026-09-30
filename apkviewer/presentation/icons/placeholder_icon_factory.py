@@ -4,8 +4,8 @@ Builds the neutral placeholder image shown before an APK icon is loaded.
 
 from PIL import Image, ImageDraw, ImageTk
 
-from apkviewer.config.theme import COLOR_PLACEHOLDER_BG, COLOR_PLACEHOLDER_BORDER
-from apkviewer.config.layout import ICON_SIZE
+from apkviewer.presentation.config.theme import COLOR_PLACEHOLDER_BG, COLOR_PLACEHOLDER_BORDER
+from apkviewer.presentation.config.layout import ICON_SIZE
 
 
 class PlaceholderIconFactory:

@@ -6,7 +6,8 @@ from typing import Any
 
 from androguard.core.apk import APK
 
-from apkviewer.domain.interfaces.analysis_section_extractor import AnalysisSectionExtractor
+from apkviewer.domain.entities.analysis_labels import FIELD_CERTIFICATES
+from apkviewer.infrastructure.androguard.analysis_section_extractor import AnalysisSectionExtractor
 
 
 class SecurityInfoExtractor(AnalysisSectionExtractor):
@@ -30,5 +31,5 @@ class SecurityInfoExtractor(AnalysisSectionExtractor):
         return {
             "Permissions": sorted(perms),
             "AppOps / Custom Perms": sorted(appops),
-            "Certificates": certs,
+            FIELD_CERTIFICATES: certs,
         }

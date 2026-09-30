@@ -1,64 +1,66 @@
 """
-Decides how sibling entries of the file tree are ordered.
+Decides how the children of a file-tree node are ordered.
 
-This is pure ordering logic over the tree data (no Tkinter dependency),
-which is why it lives in the application layer rather than alongside the
-FilesPanel widget that happens to be its only current caller.
+This is pure ordering logic with no dependency on any UI toolkit: the
+front end only translates its own column identifiers into a FileSortKey.
 """
 
-import os
+from datetime import datetime
+from enum import Enum
 from typing import Any
+
+from apkviewer.domain.entities.file_node import FileNode
+
+
+class FileSortKey(Enum):
+    NAME = "name"
+    TYPE = "type"
+    SIZE = "size"
+    COMPRESSED = "compressed"
+    MODIFIED = "modified"
 
 
 class FileTreeSorter:
     """
-    Sorts one level of file-tree siblings by a chosen column.
-
     Directories are always grouped before files (as in most file
-    explorers); only the ordering *within* each group follows the
-    selected column and direction. Numeric columns (size, compressed)
-    sort by their raw byte count, and the modified column sorts by its
-    "%Y-%m-%d %H:%M:%S" string, which is chronologically ordered as-is -
-    neither is ever compared alphabetically against a formatted string.
+    explorers); only the ordering *within* each group follows the selected
+    key and direction. Numeric keys sort by raw byte count and the modified
+    key by its datetime, never by a formatted string.
     """
 
-    DEFAULT_COLUMN: str = "#0"
+    DEFAULT_KEY: FileSortKey = FileSortKey.NAME
 
     def __init__(self) -> None:
-        self.column: str = self.DEFAULT_COLUMN
+        self.key: FileSortKey = self.DEFAULT_KEY
         self.reverse: bool = False
 
-    def toggle(self, column: str) -> None:
-        """Sort by `column`; clicking the same column again flips direction."""
-        if self.column == column:
+    def toggle(self, key: FileSortKey) -> None:
+        """Sort by `key`; requesting the same key again flips the direction."""
+        if self.key == key:
             self.reverse = not self.reverse
         else:
-            self.column = column
+            self.key = key
             self.reverse = False
 
-    def sorted_entries(self, node_dict: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
-        items = list(node_dict.items())
-        folders = [item for item in items if not item[1].get("__is_file__", False)]
-        files = [item for item in items if item[1].get("__is_file__", False)]
+    def sorted_children(self, node: FileNode) -> list[FileNode]:
+        children = list(node.children.values())
+        folders = [child for child in children if not child.is_file]
+        files = [child for child in children if child.is_file]
         folders.sort(key=self._sort_key, reverse=self.reverse)
         files.sort(key=self._sort_key, reverse=self.reverse)
         return folders + files
 
-    def _sort_key(self, item: tuple[str, dict[str, Any]]) -> tuple[str | int, str]:
-        name, meta = item
-        # `name.lower()` as a tiebreaker keeps the order stable/predictable
-        # whenever two entries share the same value for the chosen column.
-        return (self._column_value(name, meta), name.lower())
+    def _sort_key(self, node: FileNode) -> tuple[Any, str]:
+        # The name is a tiebreaker that keeps the order stable/predictable.
+        return (self._key_value(node), node.name.lower())
 
-    def _column_value(self, name: str, meta: dict[str, Any]) -> str | int:
-        if self.column == "#0":
-            return name.lower()
-        if self.column == "type":
-            if meta.get("__is_file__", False):
-                return os.path.splitext(name)[1].lstrip(".").upper()
-            return ""
-        if self.column in ("size", "compressed"):
-            return meta.get(f"__{self.column}__", 0)
-        if self.column == "modified":
-            return meta.get("__modified__", "")
-        return name.lower()
+    def _key_value(self, node: FileNode) -> Any:
+        if self.key == FileSortKey.TYPE:
+            return node.extension
+        if self.key == FileSortKey.SIZE:
+            return node.size
+        if self.key == FileSortKey.COMPRESSED:
+            return node.compressed_size
+        if self.key == FileSortKey.MODIFIED:
+            return node.modified or datetime.min
+        return node.name.lower()

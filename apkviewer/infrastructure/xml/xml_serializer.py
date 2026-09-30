@@ -1,6 +1,6 @@
 """
-Port abstracting away which XML library actually serializes an XML tree
-into bytes, so ManifestFormatter doesn't depend on a concrete library.
+Contract abstracting which XML library serializes an XML tree into bytes,
+so ManifestFormatter doesn't depend on a concrete library.
 """
 
 from abc import ABC, abstractmethod

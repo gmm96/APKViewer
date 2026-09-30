@@ -4,7 +4,7 @@ Default XmlSerializer implementation, backed by lxml.
 
 from lxml import etree
 
-from apkviewer.domain.interfaces.xml_serializer import XmlSerializer
+from apkviewer.infrastructure.xml.xml_serializer import XmlSerializer
 
 
 class LxmlSerializer(XmlSerializer):

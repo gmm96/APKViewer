@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import messagebox
 from typing import Optional
 
-from apkviewer.config.about import ISSUES_URL, REPOSITORY_URL
+from apkviewer.presentation.config.about import ISSUES_URL, REPOSITORY_URL
 from apkviewer.domain.interfaces.url_opener import UrlOpener
 from .about_dialog import AboutDialog
 

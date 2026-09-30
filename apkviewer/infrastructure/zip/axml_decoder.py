@@ -5,7 +5,7 @@ back into plain readable XML bytes.
 
 from androguard.core.axml import AXMLPrinter
 
-from apkviewer.domain.interfaces.file_decoder import FileDecoder
+from apkviewer.infrastructure.zip.file_decoder import FileDecoder
 
 
 class AxmlDecoder(FileDecoder):

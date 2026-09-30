@@ -2,7 +2,7 @@
 Formats byte counts as B / KB / MB / GB / TB, as most file browsers do.
 """
 
-from apkviewer.domain.interfaces.size_formatter import SizeFormatter
+from apkviewer.presentation.formatting.size_formatter import SizeFormatter
 
 
 class HumanReadableSizeFormatter(SizeFormatter):

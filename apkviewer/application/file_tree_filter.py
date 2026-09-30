@@ -1,30 +1,29 @@
 """
-Filters a file-tree dict (as built by FileTreeBuilder) by a text query.
+Filters a file tree by a text query.
 """
 
-from typing import Any
+from dataclasses import replace
+
+from apkviewer.domain.entities.file_node import FileNode
 
 
 class FileTreeFilter:
-    def filter(self, node_dict: dict[str, Any], query: str) -> dict[str, Any]:
+    def filter(self, root: FileNode, query: str) -> FileNode:
         """Return a filtered copy of the tree, keeping only nodes matching `query`."""
         normalized_query = (query or "").strip().lower()
         if not normalized_query:
-            return node_dict
-        return self._filter_recursive(node_dict, normalized_query, force_include=False)
+            return root
+        return self._filter_node(root, normalized_query, force_include=False)
 
-    def _filter_recursive(self, node_dict: dict[str, Any], query: str, force_include: bool) -> dict[str, Any]:
-        filtered = {}
-        for name, meta in node_dict.items():
-            matches_name = query in name.lower()
-            should_include = force_include or matches_name
-            if meta.get("__is_file__"):
-                if should_include:
-                    filtered[name] = meta
-            else:
-                children = self._filter_recursive(meta.get("__children__", {}), query, should_include)
-                if children or should_include:
-                    new_meta = dict(meta)
-                    new_meta["__children__"] = children
-                    filtered[name] = new_meta
-        return filtered
+    def _filter_node(self, node: FileNode, query: str, force_include: bool) -> FileNode:
+        kept: dict[str, FileNode] = {}
+        for name, child in node.children.items():
+            include = force_include or query in name.lower()
+            if child.is_file:
+                if include:
+                    kept[name] = child
+                continue
+            filtered = self._filter_node(child, query, include)
+            if filtered.children or include:
+                kept[name] = filtered
+        return replace(node, children=kept)

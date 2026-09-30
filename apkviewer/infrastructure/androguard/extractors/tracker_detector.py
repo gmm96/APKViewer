@@ -5,8 +5,8 @@ Scans DEX class packages for known analytics/ads/SDK signatures.
 from androguard.core.apk import APK
 from androguard.core.dex import DEX
 
-from apkviewer.config.trackers import KNOWN_TRACKERS
-from apkviewer.domain.interfaces.analysis_section_extractor import AnalysisSectionExtractor
+from apkviewer.infrastructure.androguard.analysis_section_extractor import AnalysisSectionExtractor
+from apkviewer.infrastructure.androguard.config.trackers import KNOWN_TRACKERS
 
 
 class TrackerDetector(AnalysisSectionExtractor):

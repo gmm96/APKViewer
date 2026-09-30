@@ -7,18 +7,17 @@ name. Whatever name the user confirms is created as a folder inside the
 chosen location, and the extracted files are written into it.
 """
 
-import os
 import tkinter as tk
 from collections.abc import Sequence
 from tkinter import filedialog, messagebox
 
-from apkviewer.infrastructure.zip.apk_extractor import ApkExtractor
+from apkviewer.application.extract_apk_entries import ExtractApkEntries
 
 
 class ExtractToDialog:
-    def __init__(self, parent: tk.Misc, extractor: ApkExtractor) -> None:
+    def __init__(self, parent: tk.Misc, extract_entries: ExtractApkEntries) -> None:
         self._parent: tk.Misc = parent
-        self._extractor: ApkExtractor = extractor
+        self._extract_entries: ExtractApkEntries = extract_entries
 
     def run(
         self,
@@ -35,11 +34,7 @@ class ExtractToDialog:
             return
 
         try:
-            os.makedirs(dest_dir, exist_ok=True)
-            if internal_paths is None:
-                extracted = self._extractor.extract_all(apk_path, dest_dir)
-            else:
-                extracted = self._extractor.extract(apk_path, list(internal_paths), dest_dir)
+            extracted = self._extract_entries.execute(apk_path, dest_dir, internal_paths)
         except Exception as exc:
             messagebox.showerror("Extract failed", str(exc), parent=self._parent)
             return

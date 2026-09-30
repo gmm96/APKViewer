@@ -1,24 +1,25 @@
 """
-Handles lazy extraction of specific files or directories from an APK.
-Uses a pluggable decoder architecture (see AxmlDecoder) to remain
-completely agnostic of file formats.
+Zip-backed implementation of the ApkExtractor port. Uses a pluggable
+decoder architecture (see AxmlDecoder) to remain agnostic of file formats.
 """
 
 import os
 import zipfile
+from collections.abc import Sequence
 
-from apkviewer.domain.interfaces.file_decoder import FileDecoder
+from apkviewer.domain.interfaces.apk_extractor import ApkExtractor
+from apkviewer.infrastructure.zip.axml_decoder import AxmlDecoder
+from apkviewer.infrastructure.zip.file_decoder import FileDecoder
 
-from .axml_decoder import AxmlDecoder
 
-
-class ApkExtractor:
+class ZipApkExtractor(ApkExtractor):
     def __init__(self, decoders: list[FileDecoder] | None = None) -> None:
         # Inject known special cases here; the extractor remains agnostic
-        self._decoders = decoders if decoders is not None else [AxmlDecoder()]
+        self._decoders: list[FileDecoder] = decoders if decoders is not None else [AxmlDecoder()]
 
-    def extract(self, apk_path: str, internal_paths: list[str], dest_dir: str) -> list[str]:
-        extracted_paths = []
+    def extract(self, apk_path: str, internal_paths: Sequence[str], dest_dir: str) -> list[str]:
+        extracted_paths: list[str] = []
+        os.makedirs(dest_dir, exist_ok=True)
 
         # Intentionally NOT wrapped in a blanket try/except: if the APK
         # itself can't even be opened (missing, corrupt, permission denied),
@@ -29,21 +30,20 @@ class ApkExtractor:
 
             for target in internal_paths:
                 if target in all_names:
-                    out_path = self._extract_single_file(zf, target, dest_dir)
-                    if out_path:
-                        extracted_paths.append(out_path)
+                    names = [target]
                 else:
                     prefix = target if target.endswith("/") else f"{target}/"
-                    for name in all_names:
-                        if name.startswith(prefix):
-                            out_path = self._extract_single_file(zf, name, dest_dir)
-                            if out_path:
-                                extracted_paths.append(out_path)
+                    names = [name for name in all_names if name.startswith(prefix)]
+                for name in names:
+                    out_path = self._extract_single_file(zf, name, dest_dir)
+                    if out_path:
+                        extracted_paths.append(out_path)
 
         return extracted_paths
 
     def extract_all(self, apk_path: str, dest_dir: str) -> list[str]:
         """Extract every file of the APK into `dest_dir`, preserving its folder structure."""
+        os.makedirs(dest_dir, exist_ok=True)
         with zipfile.ZipFile(apk_path, "r") as zf:
             file_names = [name for name in zf.namelist() if not name.endswith("/")]
             results = (self._extract_single_file(zf, name, dest_dir) for name in file_names)
@@ -56,8 +56,8 @@ class ApkExtractor:
         # "Zip Slip" guard: APKs are untrusted input for this tool, so a
         # crafted entry name such as "../../../../etc/passwd" must never be
         # allowed to write outside the directory the user chose to extract
-        # into. os.path.normpath alone (a previous approach) does NOT
-        # protect against this - it happily resolves ".." components.
+        # into. os.path.normpath alone does NOT protect against this - it
+        # happily resolves ".." components.
         try:
             if os.path.commonpath([dest_dir_abs, out_path]) != dest_dir_abs:
                 return None
