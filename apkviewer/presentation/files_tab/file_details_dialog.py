@@ -50,7 +50,12 @@ class FileDetailsDialog:
         }
         self._render_grid(parent, fields)
 
-    def _build_multi_item(self, parent: ttk.Frame, items: list, summary: Optional[dict] = None) -> None:
+    def _build_multi_item(
+            self,
+            parent: ttk.Frame,
+            items: list,
+            summary: Optional[dict] = None
+        ) -> None:
         fields = {"Items Selected:": str(len(items))}
 
         if summary:

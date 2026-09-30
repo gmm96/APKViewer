@@ -14,14 +14,25 @@ from .xml_syntax_highlighter import XmlSyntaxHighlighter
 
 
 class ManifestPanel(ttk.Frame):
-    def __init__(self, parent, context_menu: TextContextMenu, highlighter: Optional[XmlSyntaxHighlighter] = None) -> None:
+    def __init__(
+            self,
+            parent: ttk.Notebook,
+            context_menu: TextContextMenu,
+            highlighter: Optional[XmlSyntaxHighlighter] = None
+        ) -> None:
         super().__init__(parent)
         self._highlighter: XmlSyntaxHighlighter = highlighter or XmlSyntaxHighlighter()
 
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
 
-        self.text: tk.Text = tk.Text(self, wrap=tk.NONE, font=FONT_MONO, borderwidth=0, bg=COLOR_TEXT_BG)
+        self.text: tk.Text = tk.Text(
+            self,
+            wrap=tk.NONE,
+            font=FONT_MONO,
+            borderwidth=0,
+            bg=COLOR_TEXT_BG
+        )
         v_scroll = ttk.Scrollbar(self, orient="vertical", command=self.text.yview)
         h_scroll = ttk.Scrollbar(self, orient="horizontal", command=self.text.xview)
         autohide = AutoHideScrollbar(h_scroll, {"row": 1, "column": 0, "sticky": "ew"})

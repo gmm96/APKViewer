@@ -197,7 +197,12 @@ class FilesPanel(ttk.Frame):
                     iid=child.path,
                     text=child.name,
                     image=self._icon_file,
-                    values=(type_label, size_str, compressed_str, modified_str),
+                    values=(
+                        type_label,
+                        size_str,
+                        compressed_str,
+                        modified_str
+                    ),
                     tags=("file",),
                 )
             else:
@@ -207,7 +212,12 @@ class FilesPanel(ttk.Frame):
                     iid=child.path,
                     text=child.name,
                     image=self._icon_folder,
-                    values=(f"Directory ({len(child.children)})", size_str, compressed_str, modified_str),
+                    values=(
+                        f"Directory ({len(child.children)})",
+                        size_str,
+                        compressed_str,
+                        modified_str
+                    ),
                     open=self._node_states.get(child.path, True),
                     tags=("folder",),
                 )

@@ -76,8 +76,8 @@ class ApkAnalyzerApp:
         self._configure_style()
         self.context_menu: TextContextMenu = TextContextMenu(root)
         self.intent_dialog: IntentDetailsDialog = IntentDetailsDialog(root)
+        self._build_menu()  # first: the menu bar must be packed at the very top of the window
         self._build_layout()
-        self._build_menu()
 
     def _configure_style(self) -> None:
         style = ttk.Style()
@@ -183,7 +183,10 @@ class ApkAnalyzerApp:
     def _report_failure(self, message: str) -> None:
         self.root.after(
             0,
-            lambda: messagebox.showerror("Error", f"An error occurred while analyzing the APK:\n{message}"),
+            lambda: messagebox.showerror(
+                "Error",
+                f"An error occurred while analyzing the APK:\n{message}"
+            ),
         )
         self.root.after(0, self.header.show_error)
         self._set_status("Analysis failed.", "red")

@@ -39,8 +39,16 @@ class WindowsClipboardFileCopier(ClipboardFileCopier):
                 return False
 
             p_global = kernel32.GlobalLock(h_global)
-            ctypes.memmove(p_global, ctypes.addressof(dropfiles), ctypes.sizeof(DROPFILES))
-            ctypes.memmove(p_global + ctypes.sizeof(DROPFILES), file_buffer_bytes, len(file_buffer_bytes))
+            ctypes.memmove(
+                p_global,
+                ctypes.addressof(dropfiles),
+                ctypes.sizeof(DROPFILES)
+            )
+            ctypes.memmove(
+                p_global + ctypes.sizeof(DROPFILES),
+                file_buffer_bytes,
+                len(file_buffer_bytes)
+            )
             kernel32.GlobalUnlock(h_global)
 
             user32.OpenClipboard(0)

@@ -71,7 +71,10 @@ class ComponentsExtractor(AnalysisSectionExtractor):
                 cat = node.get(f"{ANDROID_NS}name")
                 if cat:
                     extras.append(
-                        IntentActionFormat.format_extra("category", cat.replace("android.intent.category.", ""))
+                        IntentActionFormat.format_extra(
+                            "category",
+                            cat.replace("android.intent.category.", "")
+                        )
                     )
             elif node.tag == "data":
                 extras.extend(self._data_node_extras(node))

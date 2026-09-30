@@ -1,19 +1,23 @@
 """
 Generic, data-driven top menu bar. It knows nothing about what the items
-do: the caller describes the menus declaratively (MenuItem / None for a
-separator) and can enable/disable items by key. Adding a menu or an entry
+do: the caller describes the menus declaratively (AppToolbarItem / None for
+a separator) and can enable/disable items by key. Adding a menu or an entry
 therefore never requires touching this class.
 
-It also makes sure that an open drop-down never gets "stuck": it is closed
-when the user clicks elsewhere in the app or when the app loses focus.
+The bar is drawn with regular widgets (not the native menubar) so that its
+drop-downs are popped up and dismissed by the same PopupMenuController as
+every other context menu of the app: they close when the user clicks
+anywhere else or when the application loses focus.
 """
 
 import tkinter as tk
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from tkinter import ttk
 from typing import Optional
 
 from PIL import Image, ImageTk
 
+from apkviewer.presentation.common.popup_menu_controller import PopupMenuController
 from apkviewer.presentation.icons.icon_loader import IconLoader
 from apkviewer.presentation.viewmodels.app_toolbar_item import AppToolbarItem
 
@@ -26,10 +30,7 @@ class AppToolbar:
     _ICON_SIZE: tuple[int, int] = (16, 16)
     _ICON_PADDING: int = 8
     _ICON_COLOR: str = "#333333"
-    # Delay before checking whether the whole app lost focus. Focus briefly
-    # moves between the window and its own popped-up menu, so checking
-    # immediately would produce false positives.
-    _FOCUS_CHECK_DELAY_MS: int = 100
+    _BUTTON_STYLE: str = "Menubar.Toolbutton"
 
     def __init__(
         self,
@@ -44,17 +45,31 @@ class AppToolbar:
         self._positions: dict[str, tuple[tk.Menu, int]] = {}
         self._commands: dict[str, Callable[[], None]] = {}
         self._enabled: dict[str, bool] = {}
-        self._dropdowns: list[tk.Menu] = []
 
-        self._menubar: tk.Menu = tk.Menu(root)
+        ttk.Style().configure(self._BUTTON_STYLE, padding=(10, 3))
+        self._bar: ttk.Frame = ttk.Frame(root)
+        self._bar.pack(side=tk.TOP, fill=tk.X)
+        ttk.Separator(root, orient="horizontal").pack(side=tk.TOP, fill=tk.X)
+
+        self._menus: dict[str, tk.Menu] = {}
+        self._buttons: dict[str, ttk.Button] = {}
+        self._popups: dict[str, PopupMenuController] = {}
+        self._was_open_on_press: dict[str, bool] = {}
+
         for title, entries in menus.items():
-            menu = tk.Menu(self._menubar, tearoff=0)
+            menu = tk.Menu(self._bar, tearoff=0)
             self._populate(menu, entries)
-            self._menubar.add_cascade(label=title, menu=menu)
-            self._dropdowns.append(menu)
-        root.config(menu=self._menubar)
+            self._menus[title] = menu
+            self._buttons[title] = self._create_button(title)
 
-        self._install_dismiss_handlers()
+        # Created once every button exists: clicking any menu button is
+        # handled by the button itself, never as "clicked elsewhere".
+        for title, menu in self._menus.items():
+            self._popups[title] = PopupMenuController(
+                root,
+                menu,
+                ignored_widgets=self._buttons.values()
+            )
 
     def set_enabled(self, keys: Iterable[str], enabled: bool) -> None:
         state = tk.NORMAL if enabled else tk.DISABLED
@@ -63,29 +78,34 @@ class AppToolbar:
             menu.entryconfigure(index, state=state)
             self._enabled[key] = enabled
 
-    # --- Dismiss behaviour -----------------------------------------------------
+    # --- Menu buttons --------------------------------------------------------
 
-    def _install_dismiss_handlers(self) -> None:
-        # 1. Close the drop-downs when clicking anywhere else inside the app.
-        self._root.bind("<Button-1>", lambda _event: self._close_menus(), add="+")
+    def _create_button(self, title: str) -> ttk.Button:
+        button = ttk.Button(
+            self._bar,
+            text=title,
+            style=self._BUTTON_STYLE,
+            takefocus=False,
+            command=lambda: self._toggle(title),
+        )
+        button.pack(side=tk.LEFT)
+        # Remember whether the drop-down was open *before* this click, so
+        # clicking the button of an open menu closes it instead of
+        # immediately re-opening it.
+        button.bind("<ButtonPress-1>", lambda _event: self._remember_state(title), add="+")
+        return button
 
-        # 2. Close them when the app loses focus (e.g. clicking outside the window).
-        self._root.bind("<FocusOut>", lambda _event: self._schedule_focus_check(), add="+")
-        for menu in self._dropdowns:
-            menu.bind("<FocusOut>", lambda _event: self._close_menus())
+    def _remember_state(self, title: str) -> None:
+        self._was_open_on_press[title] = self._popups[title].is_open
 
-    def _schedule_focus_check(self) -> None:
-        self._root.after(self._FOCUS_CHECK_DELAY_MS, self._close_menus_if_app_unfocused)
-
-    def _close_menus_if_app_unfocused(self) -> None:
-        # focus_displayof() is None only when no window of this app has focus.
-        if self._root.focus_displayof() is None:
-            self._close_menus()
-
-    def _close_menus(self) -> None:
-        for menu in self._dropdowns:
-            menu.unpost()
-        self._menubar.unpost()
+    def _toggle(self, title: str) -> None:
+        popup = self._popups[title]
+        was_open = self._was_open_on_press.pop(title, popup.is_open)
+        if was_open:
+            popup.unpost()
+            return
+        button = self._buttons[title]
+        popup.post(button.winfo_rootx(), button.winfo_rooty() + button.winfo_height())
 
     # --- Construction --------------------------------------------------------
 
@@ -115,7 +135,10 @@ class AppToolbar:
         self._commands[item.key] = item.command
         self._enabled[item.key] = True
         if item.shortcut:
-            self._root.bind(item.shortcut, lambda _event, key=item.key: self._invoke(key))  # type: ignore
+            self._root.bind(
+                item.shortcut,
+                lambda _event, key=item.key: self._invoke(key)  # type: ignore
+            )
 
     def _icon_for(self, item: AppToolbarItem) -> ImageTk.PhotoImage:
         if not item.icon_path:

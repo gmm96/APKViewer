@@ -49,6 +49,8 @@ class AndroguardApkInspector(ApkInspector):
             package_name=apk.get_package() or "",
             app_name=apk.get_app_name() or "",
             icon_png=self._icon_extractor.extract(apk),
-            sections={title: extractor.extract(apk) for title, extractor in self._section_extractors.items()},
+            sections={
+                title: extractor.extract(apk) for title, extractor in self._section_extractors.items()
+            },
             manifest_xml=self._manifest_formatter.format(apk),
         )

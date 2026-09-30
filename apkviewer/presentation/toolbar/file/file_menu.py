@@ -90,7 +90,11 @@ class FileMenu:
     # --- Helpers -----------------------------------------------------------
 
     @staticmethod
-    def _default_file_name(result: AnalysisResult, extension: str, suffix: str | None = None) -> str:
+    def _default_file_name(
+        result: AnalysisResult,
+        extension: str,
+        suffix: str | None = None
+    ) -> str:
         stem = f"{result.default_name}_{suffix}" if suffix else result.default_name
         return f"{stem}.{extension}"
 

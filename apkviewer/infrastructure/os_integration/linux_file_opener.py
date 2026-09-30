@@ -25,7 +25,9 @@ class LinuxFileOpener(OsFileOpener):
             from dbus_next.message import Message
             from dbus_next.signature import Variant
         except ImportError as exc:
-            raise RuntimeError("The Python package 'dbus-next' is required for Open With on Linux.") from exc
+            raise RuntimeError(
+                "The Python package 'dbus-next' is required for Open With on Linux."
+            ) from exc
 
         fd = os.open(path, os.O_RDONLY)
         try:

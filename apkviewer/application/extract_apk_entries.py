@@ -11,7 +11,12 @@ class ExtractApkEntries:
     def __init__(self, extractor: ApkExtractor) -> None:
         self._extractor: ApkExtractor = extractor
 
-    def execute(self, apk_path: str, dest_dir: str, entry_paths: Sequence[str] | None = None) -> list[str]:
+    def execute(
+            self,
+            apk_path: str,
+            dest_dir: str,
+            entry_paths: Sequence[str] | None = None
+        ) -> list[str]:
         """Extract `entry_paths` (or the whole APK when None) into `dest_dir`."""
         if entry_paths is None:
             return self._extractor.extract_all(apk_path, dest_dir)

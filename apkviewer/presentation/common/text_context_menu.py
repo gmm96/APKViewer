@@ -7,6 +7,7 @@ and don't reliably get Tk's default copy binding.
 
 import tkinter as tk
 
+from apkviewer.presentation.common.popup_menu_controller import PopupMenuController
 from apkviewer.presentation.config.layout import MARKED_LINE_TAG
 
 
@@ -20,6 +21,7 @@ class TextContextMenu:
     def __init__(self, root: tk.Misc) -> None:
         self._menu = tk.Menu(root, tearoff=0)
         self._menu.add_command(label="Copy Text", command=self._copy_from_active)
+        self._popup: PopupMenuController = PopupMenuController(root, self._menu)
         self._active_widget: tk.Text | None = None
 
     def attach(self, widget: tk.Text) -> None:
@@ -29,7 +31,7 @@ class TextContextMenu:
     def _show(self, event: tk.Event) -> None:
         if isinstance(event.widget, tk.Text):
             self._active_widget = event.widget
-            self._menu.tk_popup(event.x_root, event.y_root)
+            self._popup.post(event.x_root, event.y_root)
 
     def _on_ctrl_c(self, event: tk.Event) -> str:
         if isinstance(event.widget, tk.Text):

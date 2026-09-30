@@ -18,6 +18,7 @@ from PIL import ImageTk
 from apkviewer.application.entry_previewer import EntryPreviewer
 from apkviewer.domain.entities.file_node import FileNode
 from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
+from apkviewer.presentation.common.popup_menu_controller import PopupMenuController
 from apkviewer.presentation.formatting.size_formatter import SizeFormatter
 from apkviewer.presentation.icons.icon_loader import IconLoader
 
@@ -61,14 +62,11 @@ class FilesContextMenu:
         self._menu.add_separator()
         self._add_entry("Details", self._cmd_details, "file_info.png")
 
+        # Closing on outside clicks / focus loss / Escape is shared with every other popup.
+        self._popup: PopupMenuController = PopupMenuController(tree, self._menu)
+
         self._tree.bind("<Button-3>", self._on_right_click)
         self._tree.bind("<Button-2>", self._on_right_click)
-
-        # 1. Close menu when clicking anywhere else inside the app
-        self._tree.winfo_toplevel().bind("<Button-1>", lambda e: self._menu.unpost(), add="+")
-
-        # 2. Close menu when clicking completely outside the app (losing window focus)
-        self._menu.bind("<FocusOut>", lambda e: self._menu.unpost())
 
     def _add_entry(self, label: str, command: Callable[[], None], icon_file: str) -> None:
         icon = self._icon_loader.load_icon(
@@ -78,7 +76,7 @@ class FilesContextMenu:
             padding_right=8,
         )
         self._icons.append(icon)
-        self._menu.add_command(label="{:<40}".format(label), command=command, image=icon, compound=tk.LEFT)
+        self._menu.add_command(label=f"{label:<40}", command=command, image=icon, compound=tk.LEFT)
 
     def _on_right_click(self, event) -> None:
         iid = self._tree.identify_row(event.y)
@@ -87,13 +85,7 @@ class FilesContextMenu:
                 self._tree.selection_set(iid)
 
             self._update_menu_state()
-
-            # Unpost any ghost menus first
-            self._menu.unpost()
-
-            # Post manually and force focus to enable <FocusOut> detection
-            self._menu.post(event.x_root, event.y_root)
-            self._menu.focus_set()
+            self._popup.post(event.x_root, event.y_root)
 
     def _get_selected_paths(self) -> list[str]:
         return list(self._tree.selection())
@@ -151,7 +143,10 @@ class FilesContextMenu:
             try:
                 self._entry_previewer.open_with(target)
             except Exception as exc:
-                messagebox.showerror("Error", f"Failed to launch OS Open With dialog:\n{exc}", parent=self._tree)
+                messagebox.showerror(
+                    "Error", f"Failed to launch OS Open With dialog:\n{exc}",
+                    parent=self._tree
+                )
 
     def _cmd_copy(self) -> None:
         self._menu.unpost()
@@ -209,5 +204,7 @@ class FilesContextMenu:
             "file_count": file_count,
             "folder_count": len(nodes) - file_count,
             "total_size": self._size_formatter.format(sum(node.size for node in nodes)),
-            "total_compressed": self._size_formatter.format(sum(node.compressed_size for node in nodes)),
+            "total_compressed": self._size_formatter.format(
+                sum(node.compressed_size for node in nodes)
+            ),
         }

@@ -41,9 +41,10 @@ class IntentDetailsDialog:
 
         row_idx = 0
         for label_text, value_text in fields.items():
-            ttk.Label(main_frame, text=label_text, width=15).grid(row=row_idx, column=0, sticky="w", pady=5)
+            label: ttk.Label = ttk.Label(main_frame, text=label_text, width=15)
+            label.grid(row=row_idx, column=0, sticky="w", pady=5)
 
-            entry = ttk.Entry(main_frame, font=FONT_MONO)
+            entry: ttk.Entry = ttk.Entry(main_frame, font=FONT_MONO)
             entry.insert(0, str(value_text))
             entry.configure(state="readonly")
             entry.grid(row=row_idx, column=1, sticky="ew", pady=5, padx=(10, 0))

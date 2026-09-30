@@ -5,7 +5,13 @@ Minimal XML syntax highlighter applied to the Manifest.xml text view.
 import re
 import tkinter as tk
 
-from apkviewer.presentation.config.theme import COLOR_XML_ATTR, COLOR_XML_COMMENT, COLOR_XML_TAG, COLOR_XML_VALUE, FONT_MONO_SMALL_ITALIC
+from apkviewer.presentation.config.theme import (
+    COLOR_XML_ATTR,
+    COLOR_XML_COMMENT,
+    COLOR_XML_TAG,
+    COLOR_XML_VALUE,
+    FONT_MONO_SMALL_ITALIC
+)
 
 
 class XmlSyntaxHighlighter:
@@ -17,7 +23,11 @@ class XmlSyntaxHighlighter:
         text_widget.tag_configure("xml_tag", foreground=COLOR_XML_TAG)
         text_widget.tag_configure("xml_attr", foreground=COLOR_XML_ATTR)
         text_widget.tag_configure("xml_value", foreground=COLOR_XML_VALUE)
-        text_widget.tag_configure("xml_comment", foreground=COLOR_XML_COMMENT, font=FONT_MONO_SMALL_ITALIC)
+        text_widget.tag_configure(
+            "xml_comment",
+            foreground=COLOR_XML_COMMENT,
+            font=FONT_MONO_SMALL_ITALIC
+        )
 
     def highlight(self, text_widget: tk.Text, content: str) -> None:
         for match in self._TAG_RE.finditer(content):
@@ -28,12 +38,24 @@ class XmlSyntaxHighlighter:
             self._tag_range(text_widget, "xml_comment", match.start(), match.end())
             text_widget.tag_raise("xml_comment")
 
-    def _highlight_attributes(self, text_widget: tk.Text, tag_match: "re.Match") -> None:
+    def _highlight_attributes(
+            self,
+            text_widget: tk.Text,
+            tag_match: "re.Match"
+        ) -> None:
         tag_str = tag_match.group()
         base = tag_match.start()
         for attr_match in self._ATTR_RE.finditer(tag_str):
-            self._tag_range(text_widget, "xml_attr", base + attr_match.start(1), base + attr_match.end(1))
-            self._tag_range(text_widget, "xml_value", base + attr_match.start(2), base + attr_match.end(2))
+            self._tag_range(
+                text_widget,
+                "xml_attr",
+                base + attr_match.start(1), base + attr_match.end(1)
+            )
+            self._tag_range(
+                text_widget,
+                "xml_value",
+                base + attr_match.start(2), base + attr_match.end(2)
+            )
 
     @staticmethod
     def _tag_range(text_widget: tk.Text, tag_name: str, start: int, end: int) -> None:
