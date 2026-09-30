@@ -93,6 +93,12 @@ class AppToolbar:
         # clicking the button of an open menu closes it instead of
         # immediately re-opening it.
         button.bind("<ButtonPress-1>", lambda _event: self._remember_state(title), add="+")
+        button.bind(
+            "<Enter>", 
+            lambda _event: self._toggle(title)
+                if (PopupMenuController._open_controller is not None and not self._popups[title].is_open)
+                else None
+        )
         return button
 
     def _remember_state(self, title: str) -> None:
@@ -120,7 +126,7 @@ class AppToolbar:
 
     def _add_item(self, menu: tk.Menu, item: AppToolbarItem, use_icons: bool) -> None:
         options: dict = {
-            "label": item.label,
+            "label": f"{item.label:<30}",
             "command": lambda key=item.key: self._invoke(key),
         }
         if item.accelerator:
