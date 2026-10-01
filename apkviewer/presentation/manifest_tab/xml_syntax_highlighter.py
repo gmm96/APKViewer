@@ -5,13 +5,8 @@ Minimal XML syntax highlighter applied to the Manifest.xml text view.
 import re
 import tkinter as tk
 
-from apkviewer.presentation.config.theme import (
-    COLOR_XML_ATTR,
-    COLOR_XML_COMMENT,
-    COLOR_XML_TAG,
-    COLOR_XML_VALUE,
-    FONT_MONO_SMALL_ITALIC
-)
+from apkviewer.presentation.appearance.theme_palette import ThemePalette
+from apkviewer.presentation.config.theme import FONT_MONO_SMALL_ITALIC
 
 
 class XmlSyntaxHighlighter:
@@ -19,13 +14,14 @@ class XmlSyntaxHighlighter:
     _ATTR_RE: re.Pattern = re.compile(r"([a-zA-Z0-9_:-]+)\s*=\s*(\"[^\"]*\"|'[^']*')")
     _COMMENT_RE: re.Pattern = re.compile(r"<!--.*?-->", re.DOTALL)
 
-    def configure_tags(self, text_widget: tk.Text) -> None:
-        text_widget.tag_configure("xml_tag", foreground=COLOR_XML_TAG)
-        text_widget.tag_configure("xml_attr", foreground=COLOR_XML_ATTR)
-        text_widget.tag_configure("xml_value", foreground=COLOR_XML_VALUE)
+    def configure_tags(self, text_widget: tk.Text, palette: ThemePalette) -> None:
+        """(Re)configure the tag colors; safe to call again when the palette changes."""
+        text_widget.tag_configure("xml_tag", foreground=palette.xml_tag)
+        text_widget.tag_configure("xml_attr", foreground=palette.xml_attr)
+        text_widget.tag_configure("xml_value", foreground=palette.xml_value)
         text_widget.tag_configure(
             "xml_comment",
-            foreground=COLOR_XML_COMMENT,
+            foreground=palette.xml_comment,
             font=FONT_MONO_SMALL_ITALIC
         )
 

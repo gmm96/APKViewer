@@ -14,7 +14,6 @@ from apkviewer.application.entry_previewer import EntryPreviewer
 from apkviewer.application.export_app_info import ExportAppInfo
 from apkviewer.application.export_icon import ExportIcon
 from apkviewer.application.extract_apk_entries import ExtractApkEntries
-
 from apkviewer.domain.entities.analysis_labels import (
     SECTION_APPLICATION,
     SECTION_COMPONENTS,
@@ -24,7 +23,7 @@ from apkviewer.domain.entities.analysis_labels import (
     SECTION_SECURITY,
     SECTION_THIRD_PARTY,
 )
-
+from apkviewer.application.resolve_color_scheme import ResolveColorScheme
 from apkviewer.infrastructure.androguard.androguard_apk_inspector import AndroguardApkInspector
 from apkviewer.infrastructure.androguard.extractors.app_info_extractor import ApplicationInfoExtractor
 from apkviewer.infrastructure.androguard.extractors.components_extractor import ComponentsExtractor
@@ -39,7 +38,6 @@ from apkviewer.infrastructure.filesystem.temp_directory_workspace import TempDir
 from apkviewer.infrastructure.platforms.platform_services_resolver import PlatformServicesResolver
 from apkviewer.infrastructure.zip.zip_apk_extractor import ZipApkExtractor
 from apkviewer.infrastructure.zip.zip_archive_reader import ZipArchiveReader
-
 from apkviewer.presentation.app import ApkAnalyzerApp
 from apkviewer.presentation.formatting.human_readable_size_formatter import HumanReadableSizeFormatter
 from apkviewer.presentation.formatting.english_long_date_formatter import EnglishLongDateFormatter
@@ -51,6 +49,7 @@ def build_app(root: tk.Tk) -> ApkAnalyzerApp:
     file_writer = LocalFileWriter()
     size_formatter = HumanReadableSizeFormatter()
     date_formatter = EnglishLongDateFormatter()
+
     section_extractors = {
         SECTION_APPLICATION: ApplicationInfoExtractor(),
         SECTION_CONFIGURATION: ConfigurationExtractor(),
@@ -61,6 +60,7 @@ def build_app(root: tk.Tk) -> ApkAnalyzerApp:
         SECTION_INTENTS: IntentActionsExtractor(),
     }
     apk_inspector = AndroguardApkInspector(section_extractors=section_extractors)
+
     return ApkAnalyzerApp(
         root,
         analyze_apk=AnalyzeApk(apk_inspector, ZipArchiveReader()),
@@ -74,6 +74,9 @@ def build_app(root: tk.Tk) -> ApkAnalyzerApp:
         export_app_info=ExportAppInfo(file_writer),
         export_icon=ExportIcon(file_writer),
         url_opener=platform_services.create_url_opener(),
+        resolve_color_scheme=ResolveColorScheme(
+            platform_services.create_system_color_scheme_detector()
+        ),
         size_formatter=size_formatter,
         date_formatter=date_formatter,
     )

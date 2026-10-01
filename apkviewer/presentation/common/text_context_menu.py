@@ -7,6 +7,8 @@ and don't reliably get Tk's default copy binding.
 
 import tkinter as tk
 
+from apkviewer.presentation.appearance.theme_palette import ThemePalette
+from apkviewer.presentation.appearance.tk_widget_styler import TkWidgetStyler
 from apkviewer.presentation.common.popup_menu_controller import PopupMenuController
 from apkviewer.presentation.config.layout import MARKED_LINE_TAG
 
@@ -18,11 +20,15 @@ class TextContextMenu:
     if nothing is selected.
     """
 
-    def __init__(self, root: tk.Misc) -> None:
+    def __init__(self, root: tk.Misc, palette: ThemePalette) -> None:
         self._menu = tk.Menu(root, tearoff=0)
         self._menu.add_command(label="Copy Text", command=self._copy_from_active)
         self._popup: PopupMenuController = PopupMenuController(root, self._menu)
         self._active_widget: tk.Text | None = None
+        self.apply_palette(palette)
+
+    def apply_palette(self, palette: ThemePalette) -> None:
+        TkWidgetStyler.style_menu(self._menu, palette)
 
     def attach(self, widget: tk.Text) -> None:
         widget.bind("<Button-3>", self._show)

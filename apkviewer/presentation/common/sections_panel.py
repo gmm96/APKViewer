@@ -12,17 +12,18 @@ from tkinter import ttk
 from typing import Any
 
 from apkviewer.domain.entities.analysis_labels import FIELD_CERTIFICATES
+from apkviewer.presentation.appearance.theme_palette import ThemePalette
+from apkviewer.presentation.appearance.tk_widget_styler import TkWidgetStyler
 from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
 from apkviewer.presentation.common.scrollable_frame import ScrollableFrame
 from apkviewer.presentation.common.text_context_menu import TextContextMenu
 from apkviewer.presentation.common.text_line_marker import TextLineMarker
 from apkviewer.presentation.config.layout import LABEL_WIDTH, MIN_LIST_LINES
-from apkviewer.presentation.config.theme import COLOR_TEXT_BG, FONT_MONO_SMALL
+from apkviewer.presentation.config.theme import FONT_MONO_SMALL
 from apkviewer.domain.interfaces.date_formatter import DateFormatter
 from apkviewer.domain.interfaces.size_formatter import SizeFormatter
 from apkviewer.presentation.formatting.english_long_date_formatter import EnglishLongDateFormatter
 from apkviewer.presentation.formatting.human_readable_size_formatter import HumanReadableSizeFormatter
-
 
 
 class SectionsPanel(ttk.Frame):
@@ -31,20 +32,31 @@ class SectionsPanel(ttk.Frame):
         parent: ttk.Notebook,
         section_titles: Sequence[str],
         context_menu: TextContextMenu,
+        palette: ThemePalette,
         line_marker: TextLineMarker | None = None,
         size_formatter: SizeFormatter | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> None:
         super().__init__(parent)
+        self._palette: ThemePalette = palette
+        self._list_widgets: list[tk.Text] = []
         self._section_titles: tuple[str, ...] = tuple(section_titles)
         self._context_menu: TextContextMenu = context_menu
         self._line_marker: TextLineMarker = line_marker or TextLineMarker()
         self._size_formatter: SizeFormatter | None = size_formatter or HumanReadableSizeFormatter()
         self._date_formatter: DateFormatter | None = date_formatter or EnglishLongDateFormatter()
-        self.scroll_frame: ScrollableFrame = ScrollableFrame(self)
+
+        self.scroll_frame: ScrollableFrame = ScrollableFrame(self, palette)
         self.scroll_frame.pack(expand=True, fill=tk.BOTH)
 
+    def apply_palette(self, palette: ThemePalette) -> None:
+        self._palette = palette
+        self.scroll_frame.apply_palette(palette)
+        for widget in self._list_widgets:
+            self._style_list_widget(widget)
+
     def clear(self) -> None:
+        self._list_widgets.clear()
         for widget in self.scroll_frame.inner_frame.winfo_children():
             widget.destroy()
 
@@ -112,7 +124,6 @@ class SectionsPanel(ttk.Frame):
             wrap=tk.NONE,
             borderwidth=1,
             relief="solid",
-            bg=COLOR_TEXT_BG,
             font=FONT_MONO_SMALL,
         )
         h_scroll = ttk.Scrollbar(container, orient="horizontal", command=text_widget.xview)
@@ -122,8 +133,14 @@ class SectionsPanel(ttk.Frame):
         text_widget.insert(tk.END, display_text)
         text_widget.configure(state="disabled")
         self._line_marker.bind(text_widget)
+        self._list_widgets.append(text_widget)
+        self._style_list_widget(text_widget)
         self._context_menu.attach(text_widget)
         self._on_list_widget_created(label_text, text_widget)
+
+    def _style_list_widget(self, text_widget: tk.Text) -> None:
+        TkWidgetStyler.style_text(text_widget, self._palette)
+        self._line_marker.apply_palette(text_widget, self._palette)
 
     @staticmethod
     def _build_display_text(label_text: str, items: list) -> tuple[str, int]:

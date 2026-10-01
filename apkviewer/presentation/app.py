@@ -16,13 +16,18 @@ from apkviewer.application.entry_previewer import EntryPreviewer
 from apkviewer.application.export_app_info import ExportAppInfo
 from apkviewer.application.export_icon import ExportIcon
 from apkviewer.application.extract_apk_entries import ExtractApkEntries
+from apkviewer.application.resolve_color_scheme import ResolveColorScheme
 from apkviewer.domain.entities.analysis_result import AnalysisResult
+from apkviewer.domain.entities.color_mode import ColorMode
 from apkviewer.domain.interfaces.url_opener import UrlOpener
 from apkviewer.domain.interfaces.size_formatter import SizeFormatter
 from apkviewer.domain.interfaces.date_formatter import DateFormatter
+from apkviewer.presentation.appearance.forest_theme import ForestTheme
+from apkviewer.presentation.appearance.theme_manager import ThemeManager
 from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
 from apkviewer.presentation.common.sections_panel import SectionsPanel
 from apkviewer.presentation.common.status_bar import StatusBar
+from apkviewer.presentation.common.status_level import StatusLevel
 from apkviewer.presentation.common.text_context_menu import TextContextMenu
 from apkviewer.presentation.components_tab.components_panel import ComponentsPanel
 from apkviewer.presentation.files_tab.files_panel import FilesPanel
@@ -35,12 +40,16 @@ from apkviewer.presentation.security_tab.security_panel import SecurityPanel
 from apkviewer.presentation.toolbar.app_toolbar import AppToolbar
 from apkviewer.presentation.toolbar.file.file_menu import FileMenu
 from apkviewer.presentation.toolbar.help.help_menu import HelpMenu
+from apkviewer.presentation.toolbar.settings.settings_menu import SettingsMenu
+from apkviewer.presentation.viewmodels.app_toolbar_choice import AppToolbarChoice
+from apkviewer.presentation.viewmodels.app_toolbar_choice_group import AppToolbarChoiceGroup
 from apkviewer.presentation.viewmodels.app_toolbar_item import AppToolbarItem
 
 _ICONS_DIR = "assets/icons/outline"
 
 
 class ApkAnalyzerApp:
+    # Menu items that only make sense once an APK has been analyzed.
     _ANALYSIS_DEPENDENT_ITEMS: tuple[str, ...] = ("export_app_info", "extract_apk", "extract_icon")
 
     def __init__(
@@ -52,6 +61,7 @@ class ApkAnalyzerApp:
         export_app_info: ExportAppInfo,
         export_icon: ExportIcon,
         url_opener: UrlOpener,
+        resolve_color_scheme: ResolveColorScheme,
         icon_loader: IconLoader | None = None,
         size_formatter: SizeFormatter | None = None,
         date_formatter: DateFormatter | None = None,
@@ -67,6 +77,9 @@ class ApkAnalyzerApp:
         self._size_formatter: SizeFormatter | None = size_formatter
         self._date_formatter: DateFormatter | None = date_formatter
 
+        # Activates the ttk theme (AUTO = follow the OS) before any widget exists.
+        self._theme: ThemeManager = ThemeManager(root, ForestTheme(root), resolve_color_scheme)
+
         # The analysis currently shown (None while nothing is loaded).
         self._result: AnalysisResult | None = None
 
@@ -80,25 +93,36 @@ class ApkAnalyzerApp:
             get_result=lambda: self._result,
         )
         self._help_actions: HelpMenu = HelpMenu(root, url_opener=url_opener)
+        self._settings_actions: SettingsMenu = SettingsMenu(root, self._theme)
 
-        self._configure_style()
-        self.context_menu: TextContextMenu = TextContextMenu(root)
+        self.context_menu: TextContextMenu = TextContextMenu(root, self._theme.palette)
         self.intent_dialog: IntentDetailsDialog = IntentDetailsDialog(root)
         self._build_menu()  # first: the menu bar must be packed at the very top of the window
         self._build_layout()
+        self._subscribe_to_theme_changes()
 
-    def _configure_style(self) -> None:
-        style = ttk.Style()
-        style.theme_use("clam")
-        style.configure("TNotebook.Tab", padding=(20, 2))
-        style.map("TNotebook.Tab", padding=[("selected", (20, 3))])
+    def _subscribe_to_theme_changes(self) -> None:
+        for listener in (
+            self.header.apply_palette,
+            self.status_bar.apply_palette,
+            self.context_menu.apply_palette,
+            self.menu_bar.apply_palette,
+            self.info_panel.apply_palette,
+            self.security_panel.apply_palette,
+            self.components_panel.apply_palette,
+            self.manifest_panel.apply_palette,
+            self.files_panel.apply_palette,
+        ):
+            self._theme.subscribe(listener)
 
     def _build_layout(self) -> None:
         top_frame = ttk.Frame(self.root)
         top_frame.pack(side=tk.TOP, fill=tk.X, padx=15, pady=15)
-        self.header: AppHeader = AppHeader(top_frame, on_load_click=self.load_apk)
+        self.header: AppHeader = AppHeader(
+            top_frame, on_load_click=self.load_apk, palette=self._theme.palette
+        )
         self.header.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.status_bar: StatusBar = StatusBar(self.root)
+        self.status_bar: StatusBar = StatusBar(self.root, self._theme.palette)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
         notebook = ttk.Notebook(self.root)
         notebook.pack(expand=True, fill=tk.BOTH, padx=10, pady=(0, 10))
@@ -106,13 +130,19 @@ class ApkAnalyzerApp:
         self.info_panel: InfoPanel = InfoPanel(
             notebook,
             self.context_menu,
+            self._theme.palette,
             size_formatter=self._size_formatter,
             date_formatter=self._date_formatter
         )
-        self.security_panel: SecurityPanel = SecurityPanel(notebook, self.context_menu)
+        self.security_panel: SecurityPanel = SecurityPanel(
+            notebook,
+            self.context_menu,
+            self._theme.palette
+        )
         self.components_panel: ComponentsPanel = ComponentsPanel(
             notebook,
             self.context_menu,
+            self._theme.palette,
             on_intent_double_click=self.intent_dialog.open,
         )
         # Panels that render slices of the analysis sections.
@@ -121,12 +151,17 @@ class ApkAnalyzerApp:
             self.security_panel,
             self.components_panel,
         )
-        self.manifest_panel: ManifestPanel = ManifestPanel(notebook, self.context_menu)
+        self.manifest_panel: ManifestPanel = ManifestPanel(
+            notebook,
+            self.context_menu,
+            self._theme.palette
+        )
         self.files_panel: FilesPanel = FilesPanel(
             notebook,
             get_default_folder_name=self._default_extract_folder_name,
             extract_dialog=self._extract_dialog,
             entry_previewer=self._entry_previewer,
+            palette=self._theme.palette,
             icon_loader=self._icon_loader,
         )
 
@@ -138,6 +173,7 @@ class ApkAnalyzerApp:
 
     def _build_menu(self) -> None:
         export, help_ = self._file_actions, self._help_actions
+        settings = self._settings_actions
         self.menu_bar: AppToolbar = AppToolbar(
             self.root,
             {
@@ -150,12 +186,36 @@ class ApkAnalyzerApp:
                     None,
                     AppToolbarItem("exit", "Exit", self.exit_app, f"{_ICONS_DIR}/exit_app.png"),
                 ],
+                "Settings": [
+                    AppToolbarChoiceGroup(
+                        key="color_mode",
+                        title="Color mode",
+                        choices=(
+                            AppToolbarChoice(
+                                ColorMode.LIGHT.value, "Light mode",
+                                lambda: settings.set_color_mode(ColorMode.LIGHT),
+                                f"{_ICONS_DIR}/light_mode.png",
+                            ),
+                            AppToolbarChoice(
+                                ColorMode.DARK.value, "Dark mode",
+                                lambda: settings.set_color_mode(ColorMode.DARK),
+                                f"{_ICONS_DIR}/dark_mode.png",
+                            ),
+                            AppToolbarChoice(
+                                ColorMode.AUTO.value, "Auto (follow system)",
+                                lambda: settings.set_color_mode(ColorMode.AUTO),
+                            ),
+                        ),
+                        selected_key=settings.color_mode.value,
+                    ),
+                ],
                 "Help": [
                     AppToolbarItem("source_code", "Source code", help_.open_source_code, f"{_ICONS_DIR}/code.png"),
                     AppToolbarItem("report_issue", "Report issue", help_.report_issue, f"{_ICONS_DIR}/bug_report.png"),
                     AppToolbarItem("about", "About", help_.show_about, f"{_ICONS_DIR}/info.png"),
                 ],
             },
+            self._theme.palette,
             icon_loader=self._icon_loader,
         )
         self.menu_bar.set_enabled(self._ANALYSIS_DEPENDENT_ITEMS, False)
@@ -180,7 +240,9 @@ class ApkAnalyzerApp:
             return
         self._result = None
         self.menu_bar.set_enabled(self._ANALYSIS_DEPENDENT_ITEMS, False)
-        self._set_status(f"Analyzing: {os.path.basename(apk_path)}... (Please wait)", "blue")
+        self._set_status(
+            f"Analyzing: {os.path.basename(apk_path)}... (Please wait)", StatusLevel.INFO
+        )
         self._set_loading(True)
         self.header.reset_to_placeholder(os.path.basename(apk_path))
         for panel in self._section_panels:
@@ -202,7 +264,7 @@ class ApkAnalyzerApp:
             self._report_failure(str(exc))
         else:
             self.root.after(0, lambda: self._render_result(result))
-            self._set_status("Analysis completed successfully.", "green")
+            self._set_status("Analysis completed successfully.", StatusLevel.SUCCESS)
         finally:
             self.root.after(0, lambda: self._set_loading(False))
 
@@ -215,12 +277,12 @@ class ApkAnalyzerApp:
             ),
         )
         self.root.after(0, self.header.show_error)
-        self._set_status("Analysis failed.", "red")
+        self._set_status("Analysis failed.", StatusLevel.ERROR)
 
     # --- UI updates (must run on the Tk main thread) ---------------------------
 
-    def _set_status(self, message: str, color: str = "gray") -> None:
-        self.root.after(0, lambda: self.status_bar.set_status(message, color))
+    def _set_status(self, message: str, level: StatusLevel = StatusLevel.NEUTRAL) -> None:
+        self.root.after(0, lambda: self.status_bar.set_status(message, level))
 
     def _set_loading(self, loading: bool) -> None:
         self.header.set_loading_enabled(not loading)

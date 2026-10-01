@@ -12,9 +12,11 @@ only scrolls the frame that is under the pointer.
 import tkinter as tk
 from tkinter import ttk
 
+from apkviewer.presentation.appearance.theme_palette import ThemePalette
+
 
 class ScrollableFrame(ttk.Frame):
-    def __init__(self, container: ttk.Frame, *args, **kwargs) -> None:
+    def __init__(self, container: ttk.Frame, palette: ThemePalette, *args, **kwargs) -> None:
         super().__init__(container, *args, **kwargs)
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
@@ -34,6 +36,7 @@ class ScrollableFrame(ttk.Frame):
         self.canvas.bind("<Configure>", self._on_canvas_configure)
         self.canvas.configure(yscrollcommand=self._on_yscroll)
 
+        self.apply_palette(palette)
         self.canvas.grid(row=0, column=0, sticky="nsew")
         self._scrollbar.grid(row=0, column=1, sticky="ns")
 
@@ -42,6 +45,9 @@ class ScrollableFrame(ttk.Frame):
         self.bind_all("<MouseWheel>", self._on_mousewheel, add="+")
         self.bind_all("<Button-4>", self._on_mousewheel, add="+")
         self.bind_all("<Button-5>", self._on_mousewheel, add="+")
+
+    def apply_palette(self, palette: ThemePalette) -> None:
+        self.canvas.configure(background=palette.window_bg)
 
     # --- Layout ----------------------------------------------------------------
 

@@ -17,6 +17,8 @@ from PIL import ImageTk
 
 from apkviewer.application.entry_previewer import EntryPreviewer
 from apkviewer.domain.entities.file_node import FileNode
+from apkviewer.presentation.appearance.theme_palette import ThemePalette
+from apkviewer.presentation.appearance.tk_widget_styler import TkWidgetStyler
 from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
 from apkviewer.presentation.common.popup_menu_controller import PopupMenuController
 from apkviewer.domain.interfaces.size_formatter import SizeFormatter
@@ -29,7 +31,6 @@ class FilesContextMenu:
     # Index of the "Open with..." entry within self._menu - needed because
     # the entries are added in this fixed order.
     _OPEN_WITH_INDEX: int = 1
-    _ICON_COLOR: str = "#333333"
 
     def __init__(
         self,
@@ -40,6 +41,7 @@ class FilesContextMenu:
         get_default_folder_name: Callable[[], str],
         get_node: Callable[[str], FileNode | None],
         size_formatter: SizeFormatter,
+        palette: ThemePalette,
         icon_loader: IconLoader | None = None,
     ) -> None:
         self._tree: ttk.Treeview = tree
@@ -49,10 +51,12 @@ class FilesContextMenu:
         self._get_default_folder_name: Callable[[], str] = get_default_folder_name
         self._get_node: Callable[[str], FileNode | None] = get_node
         self._size_formatter: SizeFormatter = size_formatter
+        self._palette: ThemePalette = palette
         self._icon_loader: IconLoader = icon_loader or IconLoader()
 
         self._menu: tk.Menu = tk.Menu(tree, tearoff=0)
         self._icons: list[ImageTk.PhotoImage] = []  # keep references so Tk doesn't drop them
+        self._entry_icon_files: list[tuple[int, str]] = []  # (menu index, icon file)
 
         self._add_entry("Open", self._cmd_open, "open_file.png")
         self._add_entry("Open with...", self._cmd_open_with, "open_with_file.png")
@@ -64,19 +68,33 @@ class FilesContextMenu:
 
         # Closing on outside clicks / focus loss / Escape is shared with every other popup.
         self._popup: PopupMenuController = PopupMenuController(tree, self._menu)
+        TkWidgetStyler.style_menu(self._menu, palette)
 
         self._tree.bind("<Button-3>", self._on_right_click)
         self._tree.bind("<Button-2>", self._on_right_click)
 
-    def _add_entry(self, label: str, command: Callable[[], None], icon_file: str) -> None:
+    def apply_palette(self, palette: ThemePalette) -> None:
+        self._palette = palette
+        TkWidgetStyler.style_menu(self._menu, palette)
+        self._icons.clear()
+        for index, icon_file in self._entry_icon_files:
+            self._menu.entryconfigure(index, image=self._load_icon(icon_file))
+
+    def _load_icon(self, icon_file: str) -> ImageTk.PhotoImage:
         icon = self._icon_loader.load_icon(
             f"assets/icons/outline/{icon_file}",
-            hex_color=self._ICON_COLOR,
+            hex_color=self._palette.icon_tint,
             padding_left=8,
             padding_right=8,
         )
         self._icons.append(icon)
+        return icon
+
+    def _add_entry(self, label: str, command: Callable[[], None], icon_file: str) -> None:
+        icon = self._load_icon(icon_file)
         self._menu.add_command(label=f"{label:<40}", command=command, image=icon, compound=tk.LEFT)
+        index = self._menu.index(tk.END)
+        self._entry_icon_files.append((index if index is not None else 0, icon_file))
 
     def _on_right_click(self, event) -> None:
         iid = self._tree.identify_row(event.y)

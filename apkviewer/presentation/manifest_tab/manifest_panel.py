@@ -6,7 +6,9 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Optional
 
-from apkviewer.presentation.config.theme import COLOR_TEXT_BG, FONT_MONO
+from apkviewer.presentation.appearance.theme_palette import ThemePalette
+from apkviewer.presentation.appearance.tk_widget_styler import TkWidgetStyler
+from apkviewer.presentation.config.theme import FONT_MONO
 from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
 from apkviewer.presentation.common.text_context_menu import TextContextMenu
 
@@ -18,6 +20,7 @@ class ManifestPanel(ttk.Frame):
             self,
             parent: ttk.Notebook,
             context_menu: TextContextMenu,
+            palette: ThemePalette,
             highlighter: Optional[XmlSyntaxHighlighter] = None
         ) -> None:
         super().__init__(parent)
@@ -26,13 +29,7 @@ class ManifestPanel(ttk.Frame):
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
 
-        self.text: tk.Text = tk.Text(
-            self,
-            wrap=tk.NONE,
-            font=FONT_MONO,
-            borderwidth=0,
-            bg=COLOR_TEXT_BG
-        )
+        self.text: tk.Text = tk.Text(self, wrap=tk.NONE, font=FONT_MONO, borderwidth=0)
         v_scroll = ttk.Scrollbar(self, orient="vertical", command=self.text.yview)
         h_scroll = ttk.Scrollbar(self, orient="horizontal", command=self.text.xview)
         autohide = AutoHideScrollbar(h_scroll, {"row": 1, "column": 0, "sticky": "ew"})
@@ -41,8 +38,12 @@ class ManifestPanel(ttk.Frame):
         self.text.grid(row=0, column=0, sticky="nsew")
         v_scroll.grid(row=0, column=1, sticky="ns")
 
-        self._highlighter.configure_tags(self.text)
         context_menu.attach(self.text)
+        self.apply_palette(palette)
+
+    def apply_palette(self, palette: ThemePalette) -> None:
+        TkWidgetStyler.style_text(self.text, palette)
+        self._highlighter.configure_tags(self.text, palette)
 
     def clear(self):
         self.text.configure(state="normal")

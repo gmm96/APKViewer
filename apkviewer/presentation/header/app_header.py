@@ -10,6 +10,7 @@ from collections.abc import Callable
 
 from PIL import Image, ImageTk
 
+from apkviewer.presentation.appearance.theme_palette import ThemePalette
 from apkviewer.presentation.config.layout import ICON_SIZE
 from apkviewer.presentation.config.theme import FONT_SUBTITLE, FONT_TITLE
 from apkviewer.presentation.icons.placeholder_icon_factory import PlaceholderIconFactory
@@ -20,11 +21,12 @@ class AppHeader(ttk.Frame):
             self,
             parent: ttk.Frame,
             on_load_click: Callable[[], None],
+            palette: ThemePalette,
             icon_factory: Optional[PlaceholderIconFactory] = None
         ) -> None:
         super().__init__(parent)
         self._icon_factory: PlaceholderIconFactory = icon_factory or PlaceholderIconFactory()
-        self._placeholder_icon: ImageTk.PhotoImage = self._icon_factory.create()
+        self._placeholder_icon: ImageTk.PhotoImage = self._icon_factory.create(palette)
         self._current_icon: Optional[ImageTk.PhotoImage] = None
 
         left = ttk.Frame(self)
@@ -43,12 +45,18 @@ class AppHeader(ttk.Frame):
             text_frame,
             text="Select an application file to begin analysis.",
             font=FONT_SUBTITLE,
-            foreground="#666666",
+            foreground=palette.secondary_fg,
         )
         self.package_label.pack(side=tk.TOP, anchor="nw", expand=True)
 
         self.load_button: ttk.Button = ttk.Button(self, text="Load APK", command=on_load_click)
         self.load_button.pack(side=tk.RIGHT)
+
+    def apply_palette(self, palette: ThemePalette) -> None:
+        self._placeholder_icon = self._icon_factory.create(palette)
+        if self._current_icon is None:
+            self.icon_label.config(image=self._placeholder_icon)
+        self.package_label.config(foreground=palette.secondary_fg)
 
     def reset_to_placeholder(self, file_name: str) -> None:
         self._current_icon = None

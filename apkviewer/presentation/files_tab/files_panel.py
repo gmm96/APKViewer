@@ -16,9 +16,10 @@ from apkviewer.application.entry_previewer import EntryPreviewer
 from apkviewer.application.file_tree_filter import FileTreeFilter
 from apkviewer.application.file_tree_sorter import FileSortKey, FileTreeSorter
 from apkviewer.domain.entities.file_node import FileNode
+from apkviewer.presentation.appearance.theme_palette import ThemePalette
 from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
 from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
-from apkviewer.presentation.config.theme import COLOR_FOLDER_BG, FONT_MONO_SMALL
+from apkviewer.presentation.config.theme import FONT_MONO_SMALL
 from apkviewer.presentation.formatting.human_readable_size_formatter import HumanReadableSizeFormatter
 from apkviewer.domain.interfaces.size_formatter import SizeFormatter
 from apkviewer.presentation.icons.icon_loader import IconLoader
@@ -54,6 +55,7 @@ class FilesPanel(ttk.Frame):
         get_default_folder_name: Callable[[], str],
         extract_dialog: ExtractToDialog,
         entry_previewer: EntryPreviewer,
+        palette: ThemePalette,
         tree_filter: FileTreeFilter | None = None,
         size_formatter: SizeFormatter | None = None,
         sorter: FileTreeSorter | None = None,
@@ -86,7 +88,7 @@ class FilesPanel(ttk.Frame):
         self.rowconfigure(2, weight=0)
         self.columnconfigure(0, weight=1)
 
-        self._build_treeview()
+        self._build_treeview(palette)
         self._build_filter_bar()
         self._update_heading_labels()
 
@@ -98,11 +100,15 @@ class FilesPanel(ttk.Frame):
             get_default_folder_name=get_default_folder_name,
             get_node=self._root_node_find,
             size_formatter=self._size_formatter,
+            palette=palette,
             icon_loader=self._icon_loader,
         )
 
-    def _build_treeview(self) -> None:
-        ttk.Style().configure("Treeview.Heading", padding=(8, 6))
+    def apply_palette(self, palette: ThemePalette) -> None:
+        self._apply_tree_style(palette)
+        self._context_menu.apply_palette(palette)
+
+    def _build_treeview(self, palette: ThemePalette) -> None:
         columns = ("type", "size", "compressed", "modified")
         self.tree: ttk.Treeview = ttk.Treeview(self, columns=columns, show="tree headings")
         self.tree.column("#0", width=380, minwidth=200, stretch=True, anchor="w")
@@ -120,8 +126,14 @@ class FilesPanel(ttk.Frame):
         self.tree.configure(yscrollcommand=v_scroll.set, xscrollcommand=autohide.scroll_command)
         self.tree.grid(row=0, column=0, sticky="nsew")
         v_scroll.grid(row=0, column=1, sticky="ns")
-        self.tree.tag_configure("folder", background=COLOR_FOLDER_BG, font=FONT_MONO_SMALL)
         self.tree.tag_configure("file", font=FONT_MONO_SMALL)
+        self._apply_tree_style(palette)
+
+    def _apply_tree_style(self, palette: ThemePalette) -> None:
+        # ttk style settings are stored per theme, so they are re-applied
+        # every time the theme changes.
+        ttk.Style().configure("Treeview.Heading", padding=(8, 6))
+        self.tree.tag_configure("folder", background=palette.folder_bg, font=FONT_MONO_SMALL)
 
     def _build_filter_bar(self) -> None:
         filter_frame = ttk.Frame(self)

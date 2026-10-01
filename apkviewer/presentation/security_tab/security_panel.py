@@ -6,6 +6,7 @@ third-party libraries.
 from tkinter import ttk
 
 from apkviewer.domain.entities.analysis_labels import SECTION_SECURITY, SECTION_THIRD_PARTY
+from apkviewer.presentation.appearance.theme_palette import ThemePalette
 from apkviewer.presentation.common.sections_panel import SectionsPanel
 from apkviewer.presentation.common.text_context_menu import TextContextMenu
 from apkviewer.presentation.common.text_line_marker import TextLineMarker
@@ -16,11 +17,13 @@ class SecurityPanel(SectionsPanel):
         self,
         parent: ttk.Notebook,
         context_menu: TextContextMenu,
+        palette: ThemePalette,
         line_marker: TextLineMarker | None = None,
     ) -> None:
         super().__init__(
             parent,
             (SECTION_SECURITY, SECTION_THIRD_PARTY),
             context_menu,
+            palette,
             line_marker,
         )

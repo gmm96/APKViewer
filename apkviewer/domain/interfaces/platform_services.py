@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 
 from .clipboard_file_copier import ClipboardFileCopier
 from .os_file_opener import OsFileOpener
+from .system_color_scheme_detector import SystemColorSchemeDetector
 from .url_opener import UrlOpener
 
 
@@ -22,4 +23,8 @@ class PlatformServices(ABC):
 
     @abstractmethod
     def create_url_opener(self) -> UrlOpener:
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_system_color_scheme_detector(self) -> SystemColorSchemeDetector:
         raise NotImplementedError

@@ -1,15 +1,12 @@
 """
-"Info" tab: displays the core application identity, build configuration, 
-and embedded endpoints.
+"Info" tab: short dashboard with the app identity, versions, SDK range,
+architectures and hardware features.
 """
 
 from tkinter import ttk
 
-from apkviewer.domain.entities.analysis_labels import (
-    SECTION_APPLICATION,
-    SECTION_CONFIGURATION,
-    SECTION_EMBEDDED_CONTENT
-)
+from apkviewer.domain.entities.analysis_labels import SECTION_APPLICATION, SECTION_CONFIGURATION, SECTION_EMBEDDED_CONTENT
+from apkviewer.presentation.appearance.theme_palette import ThemePalette
 from apkviewer.presentation.common.sections_panel import SectionsPanel
 from apkviewer.presentation.common.text_context_menu import TextContextMenu
 from apkviewer.presentation.common.text_line_marker import TextLineMarker
@@ -22,6 +19,7 @@ class InfoPanel(SectionsPanel):
         self,
         parent: ttk.Notebook,
         context_menu: TextContextMenu,
+        palette: ThemePalette,
         line_marker: TextLineMarker | None = None,
         size_formatter: SizeFormatter | None = None,
         date_formatter: DateFormatter | None = None,
@@ -30,7 +28,8 @@ class InfoPanel(SectionsPanel):
             parent,
             (SECTION_APPLICATION, SECTION_CONFIGURATION, SECTION_EMBEDDED_CONTENT),
             context_menu,
+            palette,
             line_marker,
-            size_formatter=size_formatter,
-            date_formatter=date_formatter,
+            size_formatter,
+            date_formatter
         )
