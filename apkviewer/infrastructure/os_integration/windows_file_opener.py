@@ -13,6 +13,8 @@ class WindowsFileOpener(OsFileOpener):
         getattr(os, "startfile")(path)
 
     def open_with(self, path: str) -> None:
+        # pylint: disable=import-outside-toplevel
+        # pylint: disable=invalid-name
         import ctypes
         from ctypes import wintypes
 

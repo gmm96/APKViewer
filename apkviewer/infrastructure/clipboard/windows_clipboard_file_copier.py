@@ -8,6 +8,8 @@ from apkviewer.domain.interfaces.clipboard_file_copier import ClipboardFileCopie
 
 class WindowsClipboardFileCopier(ClipboardFileCopier):
     def copy(self, file_paths: list[str]) -> bool:
+        # pylint: disable=import-outside-toplevel
+        # pylint: disable=invalid-name
         try:
             import ctypes
             from ctypes import wintypes

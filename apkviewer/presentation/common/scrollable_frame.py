@@ -60,7 +60,7 @@ class ScrollableFrame(ttk.Frame):
     def _content_fits(self) -> bool:
         return self.inner_frame.winfo_reqheight() <= self.canvas.winfo_height()
 
-    def _on_yscroll(self, first: str, last: str) -> None:
+    def _on_yscroll(self, first: float, last: float) -> None:
         if float(first) <= 0.0 and float(last) >= 1.0:
             self._scrollbar.grid_remove()
         else:

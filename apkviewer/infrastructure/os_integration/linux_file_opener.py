@@ -13,12 +13,14 @@ from apkviewer.domain.interfaces.os_file_opener import OsFileOpener
 
 class LinuxFileOpener(OsFileOpener):
     def open(self, path: str) -> None:
-        subprocess.Popen(["xdg-open", path])
+        with subprocess.Popen(["xdg-open", path]):
+            pass
 
     def open_with(self, path: str) -> None:
         asyncio.run(self._open_with_portal(path))
 
     async def _open_with_portal(self, path: str) -> None:
+        # pylint: disable=import-outside-toplevel
         try:
             from dbus_next.aio.message_bus import MessageBus
             from dbus_next.constants import MessageType
