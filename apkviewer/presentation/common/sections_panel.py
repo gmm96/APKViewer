@@ -1,0 +1,120 @@
+"""
+Base class of the tabs that display analysis sections as read-only entry
+fields and list boxes. A concrete tab only declares WHICH sections it
+shows (and, optionally, reacts to events of its list widgets through
+`_on_list_widget_created`); the rendering lives here once.
+"""
+
+import tkinter as tk
+from collections.abc import Mapping, Sequence
+from tkinter import ttk
+from typing import Any
+
+from apkviewer.domain.entities.analysis_labels import FIELD_CERTIFICATES
+from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
+from apkviewer.presentation.common.scrollable_frame import ScrollableFrame
+from apkviewer.presentation.common.text_context_menu import TextContextMenu
+from apkviewer.presentation.common.text_line_marker import TextLineMarker
+from apkviewer.presentation.config.layout import LABEL_WIDTH, MIN_LIST_LINES
+from apkviewer.presentation.config.theme import COLOR_TEXT_BG, FONT_MONO_SMALL
+
+
+class SectionsPanel(ttk.Frame):
+    def __init__(
+        self,
+        parent: ttk.Notebook,
+        section_titles: Sequence[str],
+        context_menu: TextContextMenu,
+        line_marker: TextLineMarker | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._section_titles: tuple[str, ...] = tuple(section_titles)
+        self._context_menu: TextContextMenu = context_menu
+        self._line_marker: TextLineMarker = line_marker or TextLineMarker()
+
+        self.scroll_frame: ScrollableFrame = ScrollableFrame(self)
+        self.scroll_frame.pack(expand=True, fill=tk.BOTH)
+
+    def clear(self) -> None:
+        for widget in self.scroll_frame.inner_frame.winfo_children():
+            widget.destroy()
+
+    def render(self, sections: Mapping[str, Mapping[str, Any]]) -> None:
+        """Render only the sections this panel is responsible for, in its own order."""
+        self.clear()
+        container = self.scroll_frame.inner_frame
+        container.columnconfigure(0, weight=1)
+        visible = [(title, sections[title]) for title in self._section_titles if title in sections]
+        for row_idx, (section_title, fields) in enumerate(visible):
+            frame = ttk.LabelFrame(container, text=section_title)
+            frame.grid(row=row_idx, column=0, sticky="ew", padx=15, pady=10)
+            for inner_row, (label, value) in enumerate(fields.items()):
+                if isinstance(value, list):
+                    self._add_list_field(frame, inner_row, label, value)
+                else:
+                    self._add_entry_field(frame, inner_row, label, value)
+
+    # --- Extension point -------------------------------------------------------
+
+    def _on_list_widget_created(self, label_text: str, text_widget: tk.Text) -> None:
+        """Hook for subclasses that need extra behaviour on a specific list field."""
+
+    # --- Field builders ------------------------------------------------------
+
+    def _add_entry_field(
+            self,
+            parent: ttk.LabelFrame,
+            row: int,
+            label_text: str,
+            value: Any
+        ) -> None:
+        label: ttk.Label = ttk.Label(parent, text=label_text, width=LABEL_WIDTH)
+        label.grid(row=row, column=0, sticky="w", padx=10, pady=5)
+        entry = ttk.Entry(parent)
+        entry.insert(0, str(value) if value is not None else "")
+        entry.configure(state="readonly")
+        entry.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
+        parent.columnconfigure(1, weight=1)
+
+    def _add_list_field(
+            self,
+            parent: ttk.LabelFrame,
+            row: int,
+            label_text: str,
+            items: list[Any]
+        ) -> None:
+        label: ttk.Label = ttk.Label(parent, text=f"{label_text} ({len(items)})", width=LABEL_WIDTH)
+        label.grid(row=row, column=0, sticky="nw", padx=10, pady=5)
+        display_text, line_count = self._build_display_text(label_text, items)
+        container = ttk.Frame(parent)
+        container.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
+        parent.columnconfigure(1, weight=1)
+        container.columnconfigure(0, weight=1)
+        container.rowconfigure(0, weight=1)
+        text_widget = tk.Text(
+            container,
+            height=line_count,
+            wrap=tk.NONE,
+            borderwidth=1,
+            relief="solid",
+            bg=COLOR_TEXT_BG,
+            font=FONT_MONO_SMALL,
+        )
+        h_scroll = ttk.Scrollbar(container, orient="horizontal", command=text_widget.xview)
+        autohide = AutoHideScrollbar(h_scroll, {"row": 1, "column": 0, "sticky": "ew"})
+        text_widget.configure(xscrollcommand=autohide.scroll_command)
+        text_widget.grid(row=0, column=0, sticky="ew")
+        text_widget.insert(tk.END, display_text)
+        text_widget.configure(state="disabled")
+        self._line_marker.bind(text_widget)
+        self._context_menu.attach(text_widget)
+        self._on_list_widget_created(label_text, text_widget)
+
+    @staticmethod
+    def _build_display_text(label_text: str, items: list) -> tuple[str, int]:
+        separator = "\n\n" if label_text == FIELD_CERTIFICATES else "\n"
+        display_text = separator.join(items) if items else "None found"
+
+        line_count = max(display_text.count("\n") + 1, MIN_LIST_LINES)
+        display_text += "\n" * (line_count - (display_text.count("\n") + 1))
+        return display_text, line_count

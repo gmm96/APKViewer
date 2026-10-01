@@ -19,14 +19,17 @@ from apkviewer.application.extract_apk_entries import ExtractApkEntries
 from apkviewer.domain.entities.analysis_result import AnalysisResult
 from apkviewer.domain.interfaces.url_opener import UrlOpener
 from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
+from apkviewer.presentation.common.sections_panel import SectionsPanel
 from apkviewer.presentation.common.status_bar import StatusBar
 from apkviewer.presentation.common.text_context_menu import TextContextMenu
+from apkviewer.presentation.components_tab.components_panel import ComponentsPanel
 from apkviewer.presentation.files_tab.files_panel import FilesPanel
 from apkviewer.presentation.header.app_header import AppHeader
 from apkviewer.presentation.icons.icon_loader import IconLoader
 from apkviewer.presentation.info_tab.info_panel import InfoPanel
 from apkviewer.presentation.intent.intent_details_dialog import IntentDetailsDialog
 from apkviewer.presentation.manifest_tab.manifest_panel import ManifestPanel
+from apkviewer.presentation.security_tab.security_panel import SecurityPanel
 from apkviewer.presentation.toolbar.app_toolbar import AppToolbar
 from apkviewer.presentation.toolbar.file.file_menu import FileMenu
 from apkviewer.presentation.toolbar.help.help_menu import HelpMenu
@@ -94,14 +97,21 @@ class ApkAnalyzerApp:
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
         notebook = ttk.Notebook(self.root)
         notebook.pack(expand=True, fill=tk.BOTH, padx=10, pady=(0, 10))
-        self.info_panel: InfoPanel = InfoPanel(
+
+        self.info_panel: InfoPanel = InfoPanel(notebook, self.context_menu)
+        self.security_panel: SecurityPanel = SecurityPanel(notebook, self.context_menu)
+        self.components_panel: ComponentsPanel = ComponentsPanel(
             notebook,
             self.context_menu,
-            on_intent_double_click=self.intent_dialog.open
+            on_intent_double_click=self.intent_dialog.open,
         )
-        notebook.add(self.info_panel, text="Information")
+        # Panels that render slices of the analysis sections.
+        self._section_panels: tuple[SectionsPanel, ...] = (
+            self.info_panel,
+            self.security_panel,
+            self.components_panel,
+        )
         self.manifest_panel: ManifestPanel = ManifestPanel(notebook, self.context_menu)
-        notebook.add(self.manifest_panel, text="Manifest")
         self.files_panel: FilesPanel = FilesPanel(
             notebook,
             get_default_folder_name=self._default_extract_folder_name,
@@ -109,6 +119,11 @@ class ApkAnalyzerApp:
             entry_previewer=self._entry_previewer,
             icon_loader=self._icon_loader,
         )
+
+        notebook.add(self.info_panel, text="Info")
+        notebook.add(self.security_panel, text="Security")
+        notebook.add(self.components_panel, text="Components")
+        notebook.add(self.manifest_panel, text="Manifest")
         notebook.add(self.files_panel, text="Files")
 
     def _build_menu(self) -> None:
@@ -158,7 +173,8 @@ class ApkAnalyzerApp:
         self._set_status(f"Analyzing: {os.path.basename(apk_path)}... (Please wait)", "blue")
         self._set_loading(True)
         self.header.reset_to_placeholder(os.path.basename(apk_path))
-        self.info_panel.clear()
+        for panel in self._section_panels:
+            panel.clear()
         self.manifest_panel.clear()
         self.files_panel.clear()
         threading.Thread(target=self._analyze_in_background, args=(apk_path,), daemon=True).start()
@@ -207,7 +223,8 @@ class ApkAnalyzerApp:
             package_name=result.package_name,
             icon_png=result.icon_png,
         )
-        self.info_panel.render(result.sections)
+        for panel in self._section_panels:
+            panel.render(result.sections)
         self.manifest_panel.render(result.manifest_xml)
         self.files_panel.render(result.apk_path, result.file_tree)
         self.menu_bar.set_enabled(self._ANALYSIS_DEPENDENT_ITEMS, True)

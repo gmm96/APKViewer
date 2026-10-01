@@ -7,12 +7,20 @@ Every collaborator can be overridden by the caller (constructor
 injection), which keeps this class unit-testable without real APK files.
 """
 
+from apkviewer.domain.entities.analysis_labels import (
+    SECTION_APP_INFO,
+    SECTION_COMPONENTS,
+    SECTION_INTENTS,
+    SECTION_SECURITY,
+    SECTION_THIRD_PARTY,
+)
 from apkviewer.domain.entities.apk_inspection import ApkInspection
 from apkviewer.domain.interfaces.apk_inspector import ApkInspector
 from apkviewer.infrastructure.androguard.analysis_section_extractor import AnalysisSectionExtractor
 from apkviewer.infrastructure.androguard.apk_loader import ApkLoader
 from apkviewer.infrastructure.androguard.extractors.app_info_extractor import AppInfoExtractor
 from apkviewer.infrastructure.androguard.extractors.components_extractor import ComponentsExtractor
+from apkviewer.infrastructure.androguard.extractors.intent_actions_extractor import IntentActionsExtractor
 from apkviewer.infrastructure.androguard.extractors.security_info_extractor import SecurityInfoExtractor
 from apkviewer.infrastructure.androguard.extractors.tracker_detector import TrackerDetector
 from apkviewer.infrastructure.androguard.icon_extractor import IconExtractor
@@ -37,10 +45,11 @@ class AndroguardApkInspector(ApkInspector):
     @staticmethod
     def _default_section_extractors() -> dict[str, AnalysisSectionExtractor]:
         return {
-            "App Information": AppInfoExtractor(),
-            "Security & Operations": SecurityInfoExtractor(),
-            "Components & Intents": ComponentsExtractor(),
-            "Extras & Libraries": TrackerDetector(),
+            SECTION_APP_INFO: AppInfoExtractor(),
+            SECTION_SECURITY: SecurityInfoExtractor(),
+            SECTION_THIRD_PARTY: TrackerDetector(),
+            SECTION_COMPONENTS: ComponentsExtractor(),
+            SECTION_INTENTS: IntentActionsExtractor(),
         }
 
     def inspect(self, apk_path: str) -> ApkInspection:

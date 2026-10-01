@@ -1,5 +1,6 @@
 """
-Extracts general app metadata (name, package, version, SDK range, ABIs).
+Extracts the app dashboard data: identity, versions, SDK range,
+architectures and hardware features.
 """
 
 from typing import Any
@@ -11,20 +12,22 @@ from apkviewer.infrastructure.androguard.analysis_section_extractor import Analy
 
 class AppInfoExtractor(AnalysisSectionExtractor):
     def extract(self, apk: APK) -> dict[str, Any]:
-        archs = {
-            f.split("/")[1]
-            for f in apk.get_files()
-            if f.startswith("lib/") and len(f.split("/")) > 1
-        }
         return {
             "App name": apk.get_app_name(),
             "Package name": apk.get_package(),
             "Version": apk.get_androidversion_name(),
             "Version code": apk.get_androidversion_code(),
-            "Split / Multidex": "Yes" if apk.is_multidex() else "No",
-            "Architectures": ", ".join(archs) if archs else "None / Unknown",
             "Min SDK": apk.get_min_sdk_version(),
             "Target SDK": apk.get_target_sdk_version(),
-            "Max SDK": apk.get_max_sdk_version(),
-            "Effective SDK": apk.get_effective_target_sdk_version(),
+            "Architectures": self._format_architectures(apk),
+            "Hardware Features": sorted(apk.get_features()),
         }
+
+    @staticmethod
+    def _format_architectures(apk: APK) -> str:
+        archs = {
+            parts[1]
+            for parts in (f.split("/") for f in apk.get_files() if f.startswith("lib/"))
+            if len(parts) > 2
+        }
+        return ", ".join(sorted(archs)) if archs else "None / Unknown"

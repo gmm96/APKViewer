@@ -1,5 +1,6 @@
 """
-Scans DEX class packages for known analytics/ads/SDK signatures.
+Scans DEX class packages for known analytics/ads/SDK signatures and lists
+the third-party libraries declared by the APK.
 """
 
 from androguard.core.apk import APK
@@ -22,7 +23,6 @@ class TrackerDetector(AnalysisSectionExtractor):
             if key in pkg.lower()
         }
         return {
-            "Hardware Features": apk.get_features(),
             "Libraries": apk.get_libraries(),
             "Trackers": sorted(trackers),
         }
