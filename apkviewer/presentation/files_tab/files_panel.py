@@ -20,7 +20,7 @@ from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
 from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
 from apkviewer.presentation.config.theme import COLOR_FOLDER_BG, FONT_MONO_SMALL
 from apkviewer.presentation.formatting.human_readable_size_formatter import HumanReadableSizeFormatter
-from apkviewer.presentation.formatting.size_formatter import SizeFormatter
+from apkviewer.domain.interfaces.size_formatter import SizeFormatter
 from apkviewer.presentation.icons.icon_loader import IconLoader
 
 from .files_context_menu import FilesContextMenu

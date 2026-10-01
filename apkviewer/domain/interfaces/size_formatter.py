@@ -11,5 +11,5 @@ from typing import Any
 
 class SizeFormatter(ABC):
     @abstractmethod
-    def format(self, num_bytes: Any) -> str:
+    def format(self, num_bytes: Any, full_mode: bool = False) -> str:
         raise NotImplementedError

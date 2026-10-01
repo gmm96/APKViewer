@@ -19,7 +19,7 @@ from apkviewer.application.entry_previewer import EntryPreviewer
 from apkviewer.domain.entities.file_node import FileNode
 from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
 from apkviewer.presentation.common.popup_menu_controller import PopupMenuController
-from apkviewer.presentation.formatting.size_formatter import SizeFormatter
+from apkviewer.domain.interfaces.size_formatter import SizeFormatter
 from apkviewer.presentation.icons.icon_loader import IconLoader
 
 from .file_details_dialog import FileDetailsDialog

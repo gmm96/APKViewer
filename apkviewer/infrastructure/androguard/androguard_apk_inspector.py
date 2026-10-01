@@ -2,13 +2,12 @@
 Androguard-backed implementation of the ApkInspector port: loads the APK
 once and runs every section extractor, the icon extractor and the manifest
 formatter against it.
-
-Every collaborator can be overridden by the caller (constructor
-injection), which keeps this class unit-testable without real APK files.
 """
 
 from apkviewer.domain.entities.analysis_labels import (
-    SECTION_APP_INFO,
+    SECTION_APPLICATION,
+    SECTION_CONFIGURATION,
+    SECTION_EMBEDDED_CONTENT,
     SECTION_COMPONENTS,
     SECTION_INTENTS,
     SECTION_SECURITY,
@@ -18,7 +17,9 @@ from apkviewer.domain.entities.apk_inspection import ApkInspection
 from apkviewer.domain.interfaces.apk_inspector import ApkInspector
 from apkviewer.infrastructure.androguard.analysis_section_extractor import AnalysisSectionExtractor
 from apkviewer.infrastructure.androguard.apk_loader import ApkLoader
-from apkviewer.infrastructure.androguard.extractors.app_info_extractor import AppInfoExtractor
+from apkviewer.infrastructure.androguard.extractors.app_info_extractor import ApplicationInfoExtractor
+from apkviewer.infrastructure.androguard.extractors.configuration_extractor import ConfigurationExtractor
+from apkviewer.infrastructure.androguard.extractors.embedded_content_extractor import EmbeddedContentExtractor
 from apkviewer.infrastructure.androguard.extractors.components_extractor import ComponentsExtractor
 from apkviewer.infrastructure.androguard.extractors.intent_actions_extractor import IntentActionsExtractor
 from apkviewer.infrastructure.androguard.extractors.security_info_extractor import SecurityInfoExtractor
@@ -45,7 +46,9 @@ class AndroguardApkInspector(ApkInspector):
     @staticmethod
     def _default_section_extractors() -> dict[str, AnalysisSectionExtractor]:
         return {
-            SECTION_APP_INFO: AppInfoExtractor(),
+            SECTION_APPLICATION: ApplicationInfoExtractor(),
+            SECTION_CONFIGURATION: ConfigurationExtractor(),
+            SECTION_EMBEDDED_CONTENT: EmbeddedContentExtractor(),
             SECTION_SECURITY: SecurityInfoExtractor(),
             SECTION_THIRD_PARTY: TrackerDetector(),
             SECTION_COMPONENTS: ComponentsExtractor(),

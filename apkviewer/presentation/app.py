@@ -18,6 +18,8 @@ from apkviewer.application.export_icon import ExportIcon
 from apkviewer.application.extract_apk_entries import ExtractApkEntries
 from apkviewer.domain.entities.analysis_result import AnalysisResult
 from apkviewer.domain.interfaces.url_opener import UrlOpener
+from apkviewer.domain.interfaces.size_formatter import SizeFormatter
+from apkviewer.domain.interfaces.date_formatter import DateFormatter
 from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
 from apkviewer.presentation.common.sections_panel import SectionsPanel
 from apkviewer.presentation.common.status_bar import StatusBar
@@ -39,7 +41,6 @@ _ICONS_DIR = "assets/icons/outline"
 
 
 class ApkAnalyzerApp:
-    # Menu items that only make sense once an APK has been analyzed.
     _ANALYSIS_DEPENDENT_ITEMS: tuple[str, ...] = ("export_app_info", "extract_apk", "extract_icon")
 
     def __init__(
@@ -52,6 +53,8 @@ class ApkAnalyzerApp:
         export_icon: ExportIcon,
         url_opener: UrlOpener,
         icon_loader: IconLoader | None = None,
+        size_formatter: SizeFormatter | None = None,
+        date_formatter: DateFormatter | None = None,
     ) -> None:
         self.root: tk.Tk = root
         self.root.title("APKViewer")
@@ -61,6 +64,8 @@ class ApkAnalyzerApp:
         self._analyze_apk: AnalyzeApk = analyze_apk
         self._entry_previewer: EntryPreviewer = entry_previewer
         self._icon_loader: IconLoader = icon_loader or IconLoader()
+        self._size_formatter: SizeFormatter | None = size_formatter
+        self._date_formatter: DateFormatter | None = date_formatter
 
         # The analysis currently shown (None while nothing is loaded).
         self._result: AnalysisResult | None = None
@@ -98,7 +103,12 @@ class ApkAnalyzerApp:
         notebook = ttk.Notebook(self.root)
         notebook.pack(expand=True, fill=tk.BOTH, padx=10, pady=(0, 10))
 
-        self.info_panel: InfoPanel = InfoPanel(notebook, self.context_menu)
+        self.info_panel: InfoPanel = InfoPanel(
+            notebook,
+            self.context_menu,
+            size_formatter=self._size_formatter,
+            date_formatter=self._date_formatter
+        )
         self.security_panel: SecurityPanel = SecurityPanel(notebook, self.context_menu)
         self.components_panel: ComponentsPanel = ComponentsPanel(
             notebook,

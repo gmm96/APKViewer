@@ -7,6 +7,7 @@ shows (and, optionally, reacts to events of its list widgets through
 
 import tkinter as tk
 from collections.abc import Mapping, Sequence
+from datetime import datetime
 from tkinter import ttk
 from typing import Any
 
@@ -17,6 +18,11 @@ from apkviewer.presentation.common.text_context_menu import TextContextMenu
 from apkviewer.presentation.common.text_line_marker import TextLineMarker
 from apkviewer.presentation.config.layout import LABEL_WIDTH, MIN_LIST_LINES
 from apkviewer.presentation.config.theme import COLOR_TEXT_BG, FONT_MONO_SMALL
+from apkviewer.domain.interfaces.date_formatter import DateFormatter
+from apkviewer.domain.interfaces.size_formatter import SizeFormatter
+from apkviewer.presentation.formatting.english_long_date_formatter import EnglishLongDateFormatter
+from apkviewer.presentation.formatting.human_readable_size_formatter import HumanReadableSizeFormatter
+
 
 
 class SectionsPanel(ttk.Frame):
@@ -26,12 +32,15 @@ class SectionsPanel(ttk.Frame):
         section_titles: Sequence[str],
         context_menu: TextContextMenu,
         line_marker: TextLineMarker | None = None,
+        size_formatter: SizeFormatter | None = None,
+        date_formatter: DateFormatter | None = None,
     ) -> None:
         super().__init__(parent)
         self._section_titles: tuple[str, ...] = tuple(section_titles)
         self._context_menu: TextContextMenu = context_menu
         self._line_marker: TextLineMarker = line_marker or TextLineMarker()
-
+        self._size_formatter: SizeFormatter | None = size_formatter or HumanReadableSizeFormatter()
+        self._date_formatter: DateFormatter | None = date_formatter or EnglishLongDateFormatter()
         self.scroll_frame: ScrollableFrame = ScrollableFrame(self)
         self.scroll_frame.pack(expand=True, fill=tk.BOTH)
 
@@ -70,8 +79,14 @@ class SectionsPanel(ttk.Frame):
         ) -> None:
         label: ttk.Label = ttk.Label(parent, text=label_text, width=LABEL_WIDTH)
         label.grid(row=row, column=0, sticky="w", padx=10, pady=5)
+        if isinstance(value, datetime) and self._date_formatter:
+            display_value = self._date_formatter.format(value)
+        elif isinstance(value, int) and label_text.lower().endswith("size") and self._size_formatter:
+            display_value = self._size_formatter.format(value, True)
+        else:
+            display_value = str(value) if value is not None else ""
         entry = ttk.Entry(parent)
-        entry.insert(0, str(value) if value is not None else "")
+        entry.insert(0, display_value)
         entry.configure(state="readonly")
         entry.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
         parent.columnconfigure(1, weight=1)

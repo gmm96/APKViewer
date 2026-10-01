@@ -4,11 +4,23 @@ plain, human-readable text suitable for saving into a .txt file.
 """
 
 from collections.abc import Mapping
+from datetime import datetime
 from typing import Any
+
+from apkviewer.domain.interfaces.date_formatter import DateFormatter
+from apkviewer.domain.interfaces.size_formatter import SizeFormatter
 
 
 class AppInfoSerializer:
     _INDENT: str = "  "
+
+    def __init__(
+            self,
+            size_formatter: SizeFormatter | None = None,
+            date_formatter: DateFormatter | None = None
+        ) -> None:
+        self._size_formatter: SizeFormatter | None = size_formatter
+        self._date_formatter: DateFormatter | None = date_formatter
 
     def format(self, sections: Mapping[str, Mapping[str, Any]]) -> str:
         blocks = [self._format_section(title, fields) for title, fields in sections.items()]
@@ -19,6 +31,10 @@ class AppInfoSerializer:
         for label, value in fields.items():
             if isinstance(value, list):
                 lines.extend(self._format_list(label, value))
+            elif isinstance(value, datetime) and self._date_formatter:
+                lines.append(f"{label}: {self._date_formatter.format(value)}")
+            elif isinstance(value, int) and label.lower().endswith("size") and self._size_formatter:
+                lines.append(f"{label}: {self._size_formatter.format(value, True)}")
             else:
                 lines.append(f"{label}: {'' if value is None else value}")
         return "\n".join(lines)
