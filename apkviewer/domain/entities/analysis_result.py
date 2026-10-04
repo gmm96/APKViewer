@@ -3,22 +3,33 @@ Everything a front end needs after analyzing one APK. It only holds plain
 data (no third-party types), so any presentation layer can consume it.
 """
 
-from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
 
+from apkviewer.domain.entities.apk_inspection import ApkInspection
 from apkviewer.domain.entities.file_node import FileNode
 
 
 @dataclass(frozen=True)
 class AnalysisResult:
     apk_path: str
-    package_name: str
-    app_name: str
-    icon_png: bytes | None
-    sections: Mapping[str, Mapping[str, Any]]
-    manifest_xml: str
+    inspection: ApkInspection
     file_tree: FileNode
+
+    @property
+    def app_name(self) -> str:
+        return self.inspection.application.app_name
+
+    @property
+    def package_name(self) -> str:
+        return self.inspection.application.package_name
+
+    @property
+    def icon_png(self) -> bytes | None:
+        return self.inspection.icon_png
+
+    @property
+    def manifest_xml(self) -> str:
+        return self.inspection.manifest_xml
 
     @property
     def default_name(self) -> str:

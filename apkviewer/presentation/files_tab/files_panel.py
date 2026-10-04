@@ -1,14 +1,13 @@
 """
-"Files" tab: hierarchical view of the APK's internal zip entries, with a
-live text filter, column-header sorting, and a right-click context menu
-for Open / Open with / Copy / Extract to / Details.
+"Files" tab: hierarchical view of the APK's internal zip entries. It is the
+files flavour of BaseTreePanel (which provides the filter, header sorting
+and scrolling) plus a right-click context menu for Open / Open with / Copy /
+Extract to / Details.
 """
 
 import tkinter as tk
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime
-from functools import partial
-from tkinter import ttk
 
 from PIL import ImageTk
 
@@ -16,26 +15,25 @@ from apkviewer.application.entry_previewer import EntryPreviewer
 from apkviewer.application.file_tree_filter import FileTreeFilter
 from apkviewer.application.file_tree_sorter import FileSortKey, FileTreeSorter
 from apkviewer.domain.entities.file_node import FileNode
+from apkviewer.domain.interfaces.size_formatter import SizeFormatter
 from apkviewer.presentation.appearance.theme_palette import ThemePalette
-from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
 from apkviewer.presentation.common.extract_to_dialog import ExtractToDialog
+from apkviewer.presentation.common.tree.base_tree_panel import BaseTreePanel
+from apkviewer.presentation.common.tree.tree_column import TreeColumn
 from apkviewer.presentation.config.theme import FONT_MONO_SMALL
 from apkviewer.presentation.formatting.human_readable_size_formatter import HumanReadableSizeFormatter
-from apkviewer.domain.interfaces.size_formatter import SizeFormatter
 from apkviewer.presentation.icons.icon_loader import IconLoader
 
 from .files_context_menu import FilesContextMenu
 
-
-# Tk column identifier -> label shown in its heading.
-_COLUMN_LABELS: dict[str, str] = {
-    "#0": "Name",
-    "type": "Type",
-    "size": "Size",
-    "compressed": "Compressed",
-    "modified": "Modified",
-}
-# Tk column identifier -> the (toolkit-agnostic) key the sorter understands.
+_COLUMNS: tuple[TreeColumn, ...] = (
+    TreeColumn("#0", "Name", width=380, min_width=200, stretch=True),
+    TreeColumn("type", "Type", width=120, min_width=80),
+    TreeColumn("size", "Size", width=100, min_width=70),
+    TreeColumn("compressed", "Compressed", width=120, min_width=100),
+    TreeColumn("modified", "Modified", width=150, min_width=130),
+)
+# Tree column id -> the (toolkit-agnostic) key the sorter understands.
 _COLUMN_SORT_KEYS: dict[str, FileSortKey] = {
     "#0": FileSortKey.NAME,
     "type": FileSortKey.TYPE,
@@ -43,15 +41,13 @@ _COLUMN_SORT_KEYS: dict[str, FileSortKey] = {
     "compressed": FileSortKey.COMPRESSED,
     "modified": FileSortKey.MODIFIED,
 }
-ARROW_UP: str = "⏶"
-ARROW_DOWN: str = "⏷"
 _DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 
 
-class FilesPanel(ttk.Frame):
+class FilesPanel(BaseTreePanel[FileNode]):
     def __init__(
         self,
-        parent: ttk.Notebook,
+        parent: tk.Misc,
         get_default_folder_name: Callable[[], str],
         extract_dialog: ExtractToDialog,
         entry_previewer: EntryPreviewer,
@@ -61,36 +57,21 @@ class FilesPanel(ttk.Frame):
         sorter: FileTreeSorter | None = None,
         icon_loader: IconLoader | None = None,
     ) -> None:
-        super().__init__(parent)
+        # State used by the base-class hooks: it must exist before the base builds the widgets.
         self._tree_filter: FileTreeFilter = tree_filter or FileTreeFilter()
         self._size_formatter: SizeFormatter = size_formatter or HumanReadableSizeFormatter()
         self._sorter: FileTreeSorter = sorter or FileTreeSorter()
         self._icon_loader: IconLoader = icon_loader or IconLoader()
         self._entry_previewer: EntryPreviewer = entry_previewer
-
-        self._root_node: FileNode = FileNode.create_root()
-        self._node_states: dict[str, bool] = {}
         self.apk_path: str | None = None
-
         self._icon_file: ImageTk.PhotoImage = self._icon_loader.load_icon(
-            "assets/icons/color/file.png",
-            padding_left=4,
-            padding_right=8
+            "assets/icons/color/file.png", padding_left=4, padding_right=8
         )
         self._icon_folder: ImageTk.PhotoImage = self._icon_loader.load_icon(
-            "assets/icons/color/directory.png",
-            padding_left=4,
-            padding_right=8
+            "assets/icons/color/directory.png", padding_left=4, padding_right=8
         )
 
-        self.rowconfigure(0, weight=1)
-        self.rowconfigure(1, weight=0)
-        self.rowconfigure(2, weight=0)
-        self.columnconfigure(0, weight=1)
-
-        self._build_treeview(palette)
-        self._build_filter_bar()
-        self._update_heading_labels()
+        super().__init__(parent, palette, _COLUMNS)  # fills the available space (no row limit)
 
         self._context_menu: FilesContextMenu = FilesContextMenu(
             self.tree,
@@ -104,136 +85,74 @@ class FilesPanel(ttk.Frame):
             icon_loader=self._icon_loader,
         )
 
-    def apply_palette(self, palette: ThemePalette) -> None:
-        self._apply_tree_style(palette)
-        self._context_menu.apply_palette(palette)
-
-    def _build_treeview(self, palette: ThemePalette) -> None:
-        columns = ("type", "size", "compressed", "modified")
-        self.tree: ttk.Treeview = ttk.Treeview(self, columns=columns, show="tree headings")
-        self.tree.column("#0", width=380, minwidth=200, stretch=True, anchor="w")
-        self.tree.column("type", width=120, minwidth=80, stretch=False, anchor="w")
-        self.tree.column("size", width=100, minwidth=70, stretch=False, anchor="w")
-        self.tree.column("compressed", width=120, minwidth=100, stretch=False, anchor="w")
-        self.tree.column("modified", width=150, minwidth=130, stretch=False, anchor="w")
-
-        for column in _COLUMN_LABELS:
-            self.tree.heading(column, anchor="w", command=partial(self._sort_by, column))
-
-        v_scroll = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
-        h_scroll = ttk.Scrollbar(self, orient="horizontal", command=self.tree.xview)
-        autohide = AutoHideScrollbar(h_scroll, {"row": 1, "column": 0, "sticky": "ew"})
-        self.tree.configure(yscrollcommand=v_scroll.set, xscrollcommand=autohide.scroll_command)
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        v_scroll.grid(row=0, column=1, sticky="ns")
-        self.tree.tag_configure("file", font=FONT_MONO_SMALL)
-        self._apply_tree_style(palette)
-
-    def _apply_tree_style(self, palette: ThemePalette) -> None:
-        # ttk style settings are stored per theme, so they are re-applied
-        # every time the theme changes.
-        ttk.Style().configure("Treeview.Heading", padding=(8, 6))
-        self.tree.tag_configure("folder", background=palette.folder_bg, font=FONT_MONO_SMALL)
-
-    def _build_filter_bar(self) -> None:
-        filter_frame = ttk.Frame(self)
-        filter_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
-        ttk.Label(filter_frame, text="Filter:").pack(side=tk.LEFT)
-        self.filter_entry: ttk.Entry = ttk.Entry(filter_frame)
-        self.filter_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        self.filter_entry.bind("<KeyRelease>", lambda e: self._apply_filter())
-
     # --- Public API -------------------------------------------------------
 
     def render(self, apk_path: str, file_tree: FileNode) -> None:
         self.apk_path = apk_path
-        self._root_node = file_tree
-        self._node_states.clear()
         self._entry_previewer.reset()  # a new APK invalidates any previous extraction
-        self.filter_entry.delete(0, tk.END)
-        self.tree.delete(*self.tree.get_children())
-        self._populate(self._root_node)
+        self.show(file_tree)
 
     def clear(self) -> None:
         self.apk_path = None
-        self.tree.delete(*self.tree.get_children())
-        self._root_node = FileNode.create_root()
-        self._node_states.clear()
+        super().clear()
+
+    def apply_palette(self, palette: ThemePalette) -> None:
+        super().apply_palette(palette)
+        self._context_menu.apply_palette(palette)
 
     def cleanup(self) -> None:
         """Releases any temporary files extracted for Open/Open with/Copy. Call on app shutdown."""
         self._entry_previewer.dispose()
 
     def _root_node_find(self, iid: str) -> FileNode | None:
-        # Looked up through a method (not a bound `self._root_node.find`)
-        # because render()/clear() replace the root node.
+        # Looked up through a method because show()/clear() replace the root node.
         return self._root_node.find(iid)
 
-    # --- Sorting ---------------------------------------------------------
+    # --- BaseTreePanel hooks -------------------------------------------------
 
-    def _sort_by(self, column: str) -> None:
-        self._sorter.toggle(_COLUMN_SORT_KEYS[column])
-        self._update_heading_labels()
-        self._apply_filter()
+    def _empty_root(self) -> FileNode:
+        return FileNode.create_root()
 
-    def _update_heading_labels(self) -> None:
-        arrow = f"  {ARROW_UP}" if self._sorter.reverse else f"  {ARROW_DOWN}"
-        for column, label in _COLUMN_LABELS.items():
-            is_sorted = _COLUMN_SORT_KEYS[column] == self._sorter.key
-            self.tree.heading(column, text=label + (arrow if is_sorted else ""))
+    def _filter_root(self, root: FileNode, query: str) -> FileNode:
+        return self._tree_filter.filter(root, query)
 
-    # --- Filtering / rendering ----------------------------------------------
+    def _children_of(self, node: FileNode) -> Sequence[FileNode]:
+        return self._sorter.sorted_children(node)
 
-    def _save_tree_state(self, parent_iid: str = "") -> None:
-        for child_iid in self.tree.get_children(parent_iid):
-            self._node_states[child_iid] = self.tree.item(child_iid, "open")
-            self._save_tree_state(child_iid)
+    def _node_iid(self, node: FileNode) -> str:
+        return node.path
 
-    def _apply_filter(self) -> None:
-        query = self.filter_entry.get()
-        self._save_tree_state()
-        self.tree.delete(*self.tree.get_children())
-        self._populate(self._tree_filter.filter(self._root_node, query))
+    def _default_open(self, node: FileNode) -> bool:
+        return True
 
-    def _populate(self, node: FileNode, parent_iid: str = "") -> None:
-        for child in self._sorter.sorted_children(node):
-            size_str = self._size_formatter.format(child.size)
-            compressed_str = self._size_formatter.format(child.compressed_size)
-            modified_str = self._format_modified(child.modified)
+    def _sort_state(self) -> tuple[str, bool]:
+        column = next(col for col, key in _COLUMN_SORT_KEYS.items() if key == self._sorter.key)
+        return column, self._sorter.reverse
 
-            if child.is_file:
-                type_label = f"{child.extension} File" if child.extension else "File"
-                self.tree.insert(
-                    parent_iid,
-                    tk.END,
-                    iid=child.path,
-                    text=child.name,
-                    image=self._icon_file,
-                    values=(
-                        type_label,
-                        size_str,
-                        compressed_str,
-                        modified_str
-                    ),
-                    tags=("file",),
-                )
-            else:
-                self.tree.insert(
-                    parent_iid,
-                    tk.END,
-                    iid=child.path,
-                    text=child.name,
-                    image=self._icon_folder,
-                    values=(
-                        f"Directory ({len(child.children)})",
-                        size_str,
-                        compressed_str,
-                        modified_str
-                    ),
-                    open=self._node_states.get(child.path, True),
-                    tags=("folder",),
-                )
-                self._populate(child, child.path)
+    def _toggle_sort(self, column_id: str) -> None:
+        self._sorter.toggle(_COLUMN_SORT_KEYS[column_id])
+
+    def _configure_tags(self, palette: ThemePalette) -> None:
+        self.tree.tag_configure("file", font=FONT_MONO_SMALL)
+        self.tree.tag_configure("folder", background=palette.folder_bg, font=FONT_MONO_SMALL)
+
+    def _insert(self, parent_iid: str, node: FileNode, iid: str, is_open: bool) -> None:
+        size_str = self._size_formatter.format(node.size)
+        compressed_str = self._size_formatter.format(node.compressed_size)
+        modified_str = self._format_modified(node.modified)
+
+        if node.is_file:
+            type_label = f"{node.extension} File" if node.extension else "File"
+            self.tree.insert(
+                parent_iid, tk.END, iid=iid, text=node.name, image=self._icon_file,
+                values=(type_label, size_str, compressed_str, modified_str), tags=("file",),
+            )
+        else:
+            self.tree.insert(
+                parent_iid, tk.END, iid=iid, text=node.name, image=self._icon_folder,
+                values=(f"Directory ({len(node.children)})", size_str, compressed_str, modified_str),
+                open=is_open, tags=("folder",),
+            )
 
     @staticmethod
     def _format_modified(modified: datetime | None) -> str:

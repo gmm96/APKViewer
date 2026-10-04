@@ -1,20 +1,149 @@
 """
-Extracts the components declared by the APK (activities, services,
-receivers and providers).
+Extracts the components declared in the manifest (activities, services,
+receivers and providers) together with their intent filters.
+
+Only raw manifest values are read here; what they mean for each Android
+version (e.g. the default of `exported`) is decided by ExportState.
 """
 
 from typing import Any
 
 from androguard.core.apk import APK
 
-from apkviewer.infrastructure.androguard.analysis_section_extractor import AnalysisSectionExtractor
+from apkviewer.domain.entities.component_kind import ComponentKind
+from apkviewer.domain.entities.components import (
+    Component,
+    DeclaredComponents,
+    IntentFilter,
+    ManifestElement,
+)
+from apkviewer.domain.entities.export_state import ExportState
+from apkviewer.domain.entities.exported_intent import IntentData
+from apkviewer.infrastructure.androguard.config.android import ANDROID_NS
+
+# targetSdkVersion given as a codename (a preview build) is newer than any numbered release.
+_PREVIEW_SDK: int = 10_000
 
 
-class ComponentsExtractor(AnalysisSectionExtractor):
-    def extract(self, apk: APK) -> dict[str, Any]:
-        return {
-            "Activities": sorted(apk.get_activities()),
-            "Services": sorted(apk.get_services()),
-            "Receivers": sorted(apk.get_receivers()),
-            "Providers": sorted(apk.get_providers()),
-        }
+class ComponentsExtractor:
+    _KINDS: dict[str, ComponentKind] = {
+        "activity": ComponentKind.ACTIVITY,
+        "activity-alias": ComponentKind.ACTIVITY_ALIAS,
+        "service": ComponentKind.SERVICE,
+        "receiver": ComponentKind.RECEIVER,
+        "provider": ComponentKind.PROVIDER,
+    }
+    _CATEGORY_PREFIX: str = "android.intent.category."
+    # Attributes already shown as dedicated fields of Component.
+    _DEDICATED_ATTRIBUTES: frozenset[str] = frozenset({"name", "exported", "permission"})
+
+    def extract(self, apk: APK) -> DeclaredComponents:
+        pkg_name = apk.get_package() or ""
+        target_sdk = self._target_sdk(apk)
+        components: list[Component] = []
+        try:
+            xml_root = apk.get_android_manifest_xml()
+            if xml_root is None:
+                return DeclaredComponents()
+            for tag, kind in self._KINDS.items():
+                for node in xml_root.iter(tag):
+                    components.append(self._to_component(node, kind, pkg_name, target_sdk))
+        except Exception:
+            pass
+
+        order = list(ComponentKind)
+        unique = dict.fromkeys(components)
+        return DeclaredComponents(
+            tuple(sorted(unique, key=lambda c: (order.index(c.kind), c.name.lower())))
+        )
+
+    @staticmethod
+    def _target_sdk(apk: APK) -> int | None:
+        """targetSdkVersion, falling back to minSdkVersion (what Android does); None if neither is readable."""
+        for getter in (apk.get_target_sdk_version, apk.get_min_sdk_version):
+            try:
+                raw = getter()
+            except Exception:
+                continue
+            if raw is None:
+                continue
+            try:
+                return int(raw)
+            except (TypeError, ValueError):
+                return _PREVIEW_SDK
+        return None
+
+    def _to_component(
+        self, node: Any, kind: ComponentKind, pkg_name: str, target_sdk: int | None
+    ) -> Component:
+        filters = tuple(self._to_filter(f) for f in node.findall("intent-filter"))
+        return Component(
+            name=self._resolve_name(node, pkg_name),
+            kind=kind,
+            export_state=ExportState.resolve(
+                kind, node.get(f"{ANDROID_NS}exported"), bool(filters), target_sdk
+            ),
+            permission=node.get(f"{ANDROID_NS}permission") or None,
+            intent_filters=filters,
+            attributes=self._attributes(node, self._DEDICATED_ATTRIBUTES),
+            elements=tuple(
+                ManifestElement(child.tag, self._attributes(child))
+                for child in node
+                if isinstance(child.tag, str) and child.tag != "intent-filter"  # skips comments
+            ),
+        )
+
+    @staticmethod
+    def _attributes(
+        node: Any, skip: frozenset[str] = frozenset()
+    ) -> tuple[tuple[str, str], ...]:
+        """The attributes of a node as (local name, raw value), without the XML namespace."""
+        pairs = ((key.rsplit("}", 1)[-1], str(value)) for key, value in node.attrib.items())
+        return tuple((name, value) for name, value in pairs if name not in skip)
+
+    @staticmethod
+    def _resolve_name(node: Any, pkg_name: str) -> str:
+        name = node.get(f"{ANDROID_NS}name", "Unknown")
+        if name.startswith("."):
+            return pkg_name + name
+        if "." not in name and name != "Unknown":
+            return f"{pkg_name}.{name}"
+        return name
+
+    def _to_filter(self, filter_node: Any) -> IntentFilter:
+        actions: list[str] = []
+        categories: list[str] = []
+        data: list[IntentData] = []
+        for node in filter_node:
+            name = node.get(f"{ANDROID_NS}name")
+            if node.tag == "action" and name:
+                actions.append(name)
+            elif node.tag == "category" and name:
+                categories.append(name.replace(self._CATEGORY_PREFIX, ""))
+            elif node.tag == "data":
+                data.append(self._to_intent_data(node))
+        auto_verify = (filter_node.get(f"{ANDROID_NS}autoVerify") or "").lower() == "true"
+        return IntentFilter(tuple(actions), tuple(categories), tuple(data), auto_verify)
+
+    @staticmethod
+    def _to_intent_data(node: Any) -> IntentData:
+        def attr(name: str) -> str | None:
+            return node.get(f"{ANDROID_NS}{name}") or None
+
+        return IntentData(
+            scheme=attr("scheme"),
+            host=attr("host"),
+            port=attr("port"),
+            path=attr("path"),
+            path_prefix=attr("pathPrefix"),
+            path_pattern=attr("pathPattern"),
+            path_suffix=attr("pathSuffix"),
+            path_advanced_pattern=attr("pathAdvancedPattern"),
+            ssp=attr("ssp"),
+            ssp_prefix=attr("sspPrefix"),
+            ssp_pattern=attr("sspPattern"),
+            ssp_suffix=attr("sspSuffix"),
+            ssp_advanced_pattern=attr("sspAdvancedPattern"),
+            mime_type=attr("mimeType"),
+            mime_group=attr("mimeGroup"),
+        )

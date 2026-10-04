@@ -1,33 +1,19 @@
 """
-Scans DEX classes to extract hardcoded HTTP/HTTPS URLs.
+Scans the strings of the DEX files to extract hardcoded HTTP/HTTPS URLs.
 """
 
 import re
-from typing import Any
 
-from androguard.core.apk import APK
-from androguard.core.dex import DEX
-from apkviewer.infrastructure.androguard.analysis_section_extractor import AnalysisSectionExtractor
+from apkviewer.domain.entities.embedded_content import EmbeddedContent
+from apkviewer.infrastructure.androguard.dex_reader import DexContents
 
 
-class EmbeddedContentExtractor(AnalysisSectionExtractor):
+class EmbeddedContentExtractor:
     _URL_REGEX: re.Pattern = re.compile(r"https?://[\w\-\.\:]+(?:/[\w\-\.\:\/\?\=\&\%\#\+]*)?")
 
-    def extract(self, apk: APK) -> dict[str, Any]:
-        return {
-            "Discovered URLs": self._extract_urls(apk)
-        }
-
-    def _extract_urls(self, apk: APK) -> list[str]:
-        urls = set()
-        for dex_bytes in apk.get_all_dex():
-            try:
-                for string_data in DEX(dex_bytes).get_strings():
-                    text = string_data if isinstance(string_data, str) else string_data.decode("utf-8", errors="ignore")
-
-                    if "http://" in text or "https://" in text:
-                        urls.update(self._URL_REGEX.findall(text))
-            except Exception:
-                pass
-
-        return sorted(urls)
+    def extract(self, dex: DexContents) -> EmbeddedContent:
+        urls: set[str] = set()
+        for text in dex.strings:
+            if "http://" in text or "https://" in text:
+                urls.update(self._URL_REGEX.findall(text))
+        return EmbeddedContent(urls=tuple(sorted(urls)))

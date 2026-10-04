@@ -6,30 +6,28 @@ from typing import Any
 
 from androguard.core.apk import APK
 
-from apkviewer.domain.entities.analysis_labels import FIELD_CERTIFICATES
-from apkviewer.infrastructure.androguard.analysis_section_extractor import AnalysisSectionExtractor
+from apkviewer.domain.entities.security_info import Certificate, SecurityInfo
 
 
-class SecurityInfoExtractor(AnalysisSectionExtractor):
-    def extract(self, apk: APK) -> dict[str, Any]:
+class SecurityInfoExtractor:
+    def extract(self, apk: APK) -> SecurityInfo:
         perms: list[str] = []
         appops: list[str] = []
-        certs: list[str] = []
+        for permission in apk.get_permissions():
+            (perms if permission.startswith("android.permission.") else appops).append(permission)
 
-        for p in apk.get_permissions():
-            (perms if p.startswith("android.permission.") else appops).append(p)
+        return SecurityInfo(
+            permissions=tuple(sorted(perms)),
+            custom_permissions=tuple(sorted(appops)),
+            certificates=tuple(self._to_certificate(cert) for cert in apk.get_certificates()),
+        )
 
-        for cert in apk.get_certificates():
-            try:
-                certs.append(
-                    f"Issuer: {cert.issuer.human_friendly}\n"
-                    f"Subject: {cert.subject.human_friendly}"
-                )
-            except Exception:
-                certs.append("Unknown / Encrypted Certificate")
-
-        return {
-            "Permissions": sorted(perms),
-            "AppOps / Custom Perms": sorted(appops),
-            FIELD_CERTIFICATES: certs,
-        }
+    @staticmethod
+    def _to_certificate(cert: Any) -> Certificate:
+        try:
+            return Certificate(
+                issuer=cert.issuer.human_friendly,
+                subject=cert.subject.human_friendly,
+            )
+        except Exception:
+            return Certificate(issuer=None, subject=None)

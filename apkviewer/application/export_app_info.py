@@ -1,5 +1,5 @@
 """
-Use case: save the analysis sections as a plain text report.
+Use case: save the analysis as a plain text report.
 """
 
 from apkviewer.application.app_info_serializer import AppInfoSerializer
@@ -13,4 +13,4 @@ class ExportAppInfo:
         self._serializer: AppInfoSerializer = serializer or AppInfoSerializer()
 
     def execute(self, result: AnalysisResult, dest_path: str) -> None:
-        self._writer.write_text(dest_path, self._serializer.format(result.sections))
+        self._writer.write_text(dest_path, self._serializer.format(result))

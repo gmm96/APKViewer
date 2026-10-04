@@ -4,48 +4,43 @@ Extracts the core application identity, SDK versions, and physical file metrics.
 
 import os
 from datetime import datetime
-from typing import Any
 
 from androguard.core.apk import APK
-from apkviewer.infrastructure.androguard.analysis_section_extractor import AnalysisSectionExtractor
+
+from apkviewer.domain.entities.application_info import ApplicationInfo
 
 
-class ApplicationInfoExtractor(AnalysisSectionExtractor):
-    def __init__(self) -> None:
-        pass
-
-    def extract(self, apk: APK) -> dict[str, Any]:
+class ApplicationInfoExtractor:
+    def extract(self, apk: APK) -> ApplicationInfo:
         path = apk.get_filename()
-        info: dict[str, Any] = {
-            "App Name": apk.get_app_name(),
-            "Package Name": apk.get_package(),
-            "Version Name": apk.get_androidversion_name(),
-            "Version Code": apk.get_androidversion_code(),
-            "Min SDK": apk.get_min_sdk_version(),
-            "Target SDK": apk.get_target_sdk_version(),
-        }
-        max_sdk = apk.get_max_sdk_version()
-        if max_sdk:
-            info["Max SDK"] = max_sdk
-        info["File Name"] = os.path.basename(path) if path else "Unknown"
-        info["File Path"] = os.path.realpath(path) if path else "Unknown"
-        info["File Size"] = self._get_file_size(path)
-        info["Last Modified"] = self._get_last_modified_date(path)
-        return info
+        return ApplicationInfo(
+            app_name=apk.get_app_name() or "",
+            package_name=apk.get_package() or "",
+            version_name=apk.get_androidversion_name(),
+            version_code=apk.get_androidversion_code(),
+            min_sdk=apk.get_min_sdk_version(),
+            target_sdk=apk.get_target_sdk_version(),
+            max_sdk=apk.get_max_sdk_version() or None,
+            file_name=os.path.basename(path) if path else None,
+            file_path=os.path.realpath(path) if path else None,
+            file_size=self._file_size(path),
+            last_modified=self._last_modified(path),
+        )
 
-    def _get_file_size(self, path: str | None) -> int:
-        if not path or not os.path.exists(path):
-            return -1
+    @staticmethod
+    def _file_size(path: str | None) -> int | None:
+        if not path:
+            return None
         try:
             return os.path.getsize(path)
         except OSError:
-            return -1
+            return None
 
     @staticmethod
-    def _get_last_modified_date(path: str | None) -> datetime:
-        if not path or not os.path.exists(path):
-            return datetime.min
+    def _last_modified(path: str | None) -> datetime | None:
+        if not path:
+            return None
         try:
             return datetime.fromtimestamp(os.path.getmtime(path))
         except OSError:
-            return datetime.min
+            return None

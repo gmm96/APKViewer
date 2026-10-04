@@ -22,12 +22,4 @@ class AnalyzeApk:
     def execute(self, apk_path: str) -> AnalysisResult:
         inspection = self._inspector.inspect(apk_path)
         file_tree = self._tree_builder.build(self._archive_reader.list_entries(apk_path))
-        return AnalysisResult(
-            apk_path=apk_path,
-            package_name=inspection.package_name,
-            app_name=inspection.app_name,
-            icon_png=inspection.icon_png,
-            sections=inspection.sections,
-            manifest_xml=inspection.manifest_xml,
-            file_tree=file_tree,
-        )
+        return AnalysisResult(apk_path=apk_path, inspection=inspection, file_tree=file_tree)

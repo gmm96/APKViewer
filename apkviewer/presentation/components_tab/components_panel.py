@@ -1,51 +1,108 @@
 """
-"Components" tab: declared activities, services, receivers and providers,
-plus the exported intent actions (double-click one to see its details).
+"Components" tab: one table with every declared component. A row of pills
+above it restricts the table to one kind (a kind with no components is
+dimmed instead of opening an empty view), and each component expands to
+show its intent filters.
 """
 
 import tkinter as tk
-from collections.abc import Callable
 from tkinter import ttk
 
-from apkviewer.domain.entities.analysis_labels import (
-    FIELD_INTENT_ACTIONS,
-    SECTION_COMPONENTS,
-    SECTION_INTENTS,
-)
+from apkviewer.domain.entities.components import DeclaredComponents
 from apkviewer.presentation.appearance.theme_palette import ThemePalette
-from apkviewer.presentation.common.sections_panel import SectionsPanel
-from apkviewer.presentation.common.text_context_menu import TextContextMenu
-from apkviewer.presentation.common.text_line_marker import TextLineMarker
+from apkviewer.presentation.common.tree.record_table_panel import RecordTablePanel
+from apkviewer.presentation.common.tree.tree_column import TreeColumn
+from apkviewer.presentation.components_tab.component_tree_builder import ComponentTreeBuilder
+
+_COLUMNS: tuple[TreeColumn, ...] = (
+    TreeColumn("#0", "Name", width=460, min_width=220, stretch=True),
+    TreeColumn("type", "Type", width=110, min_width=80),
+    TreeColumn("exported", "Exported", width=120, min_width=90),
+    TreeColumn("permission", "Permission", width=260, min_width=100, stretch=True),
+)
+_ALL: str = "all"
+_PILL_STYLE: str = "ToggleButton"  # a category with components (Forest theme)
+_EMPTY_PILL_STYLE: str = "PillEmpty.Toolbutton"  # no components: flat text, no button box
 
 
-class ComponentsPanel(SectionsPanel):
+class ComponentsPanel(ttk.Frame):
     def __init__(
         self,
         parent: ttk.Notebook,
-        context_menu: TextContextMenu,
         palette: ThemePalette,
-        on_intent_double_click: Callable[[str], None],
-        line_marker: TextLineMarker | None = None,
+        tree_builder: ComponentTreeBuilder | None = None,
     ) -> None:
-        super().__init__(
-            parent,
-            (SECTION_COMPONENTS, SECTION_INTENTS),
-            context_menu,
+        super().__init__(parent)
+        self._tree_builder: ComponentTreeBuilder = tree_builder or ComponentTreeBuilder()
+
+        self._table: RecordTablePanel = RecordTablePanel(
+            self,
             palette,
-            line_marker,
+            _COLUMNS,
+            item_noun="components",
+            empty_text="No components declared.",
         )
-        self._on_intent_double_click: Callable[[str], None] = on_intent_double_click
+        self._table.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-    def _on_list_widget_created(self, label_text: str, text_widget: tk.Text) -> None:
-        if label_text == FIELD_INTENT_ACTIONS:
-            text_widget.bind("<Double-Button-1>", self._handle_intent_double_click)
+        self._selected: tk.StringVar = tk.StringVar(value=_ALL)
+        self._pill_labels: dict[str, str] = {_ALL: "All", **dict(ComponentTreeBuilder.GROUPS)}
+        self._pills: dict[str, ttk.Radiobutton] = {}
+        for key in self._pill_labels:
+            pill = ttk.Radiobutton(
+                self._table.filter_bar,
+                text=self._pill_labels[key],
+                value=key,
+                variable=self._selected,
+                style=_PILL_STYLE,
+                takefocus=False,
+                command=self._on_pill_selected,
+            )
+            pill.pack(side=tk.LEFT, padx=(0, 4), before=self._table.filter_label)
+            self._pills[key] = pill
+        self._apply_pill_style(palette)
+        self._update_pills({})
 
-    def _handle_intent_double_click(self, event: tk.Event) -> None:
-        widget = event.widget
-        if not isinstance(widget, tk.Text):
-            return
-        index = widget.index(f"@{event.x},{event.y}")
-        line_num = index.split(".")[0]
-        line_text = widget.get(f"{line_num}.0", f"{line_num}.end").strip()
-        if line_text and line_text != "None found":
-            self._on_intent_double_click(line_text)
+    def apply_palette(self, palette: ThemePalette) -> None:
+        self._table.apply_palette(palette)
+        self._apply_pill_style(palette)
+
+    def clear(self) -> None:
+        self._selected.set(_ALL)
+        self._table.set_category(None, refresh=False)
+        self._table.clear()
+        self._update_pills({})
+
+    def render(self, components: DeclaredComponents) -> None:
+        root = self._tree_builder.build_components(components)
+        counts: dict[str, int] = {}
+        for row in root.children:
+            if row.category is not None:
+                counts[row.category] = counts.get(row.category, 0) + 1
+
+        self._selected.set(_ALL)
+        self._table.set_category(None, refresh=False)
+        self._table.show(root)
+        self._update_pills(counts)
+
+    # --- Pills -------------------------------------------------------------------
+
+    @staticmethod
+    def _apply_pill_style(palette: ThemePalette) -> None:
+        # A pill without components loses its button box, so it reads as inactive at a
+        # glance (the theme's own disabled look is nearly the same as an enabled button).
+        # ttk keeps style settings per theme, so this runs on every theme change.
+        ttk.Style().map(_EMPTY_PILL_STYLE, foreground=[("disabled", palette.secondary_fg)])
+
+    def _on_pill_selected(self) -> None:
+        key = self._selected.get()
+        self._table.set_category(None if key == _ALL else key)
+
+    def _update_pills(self, counts: dict[str, int]) -> None:
+        total = sum(counts.values())
+        for key, pill in self._pills.items():
+            count = total if key == _ALL else counts.get(key, 0)
+            pill.configure(
+                text=f"{self._pill_labels[key]} ({count})",
+                style=_PILL_STYLE if count else _EMPTY_PILL_STYLE,
+                state=tk.NORMAL if count else tk.DISABLED,
+            )

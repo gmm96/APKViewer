@@ -4,13 +4,22 @@ the archive's file tree, which is obtained through a separate port.
 """
 
 from dataclasses import dataclass
-from typing import Any
+
+from apkviewer.domain.entities.application_info import ApplicationInfo
+from apkviewer.domain.entities.components import DeclaredComponents
+from apkviewer.domain.entities.configuration_info import ConfigurationInfo
+from apkviewer.domain.entities.embedded_content import EmbeddedContent
+from apkviewer.domain.entities.security_info import SecurityInfo
+from apkviewer.domain.entities.third_party_info import ThirdPartyInfo
 
 
 @dataclass(frozen=True)
 class ApkInspection:
-    package_name: str
-    app_name: str
+    application: ApplicationInfo
+    configuration: ConfigurationInfo
+    embedded_content: EmbeddedContent
+    security: SecurityInfo
+    third_party: ThirdPartyInfo
+    components: DeclaredComponents
     icon_png: bytes | None
-    sections: dict[str, dict[str, Any]]
     manifest_xml: str
