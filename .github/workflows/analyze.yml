@@ -6,11 +6,29 @@ on:
   pull_request:
 
 jobs:
-  pylint:
-    name: '[Pylint] Linting'
-    runs-on: ${{ vars.LINUX_VERSION }}
+  quality-checks:
+    name: '[${{ matrix.os_name }}] ${{ matrix.tool }}'
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        tool: [Pylint linting, Mypy type-checking]
+        include:
+          - os_name: Linux
+            runner: ${{ vars.LINUX_VERSION }}
+            pylint_ignore: '.*windows_.*,.*macos_.*'
+            mypy_exclude: '--exclude "windows_" --exclude "macos_"'
+          - os_name: Windows
+            runner: ${{ vars.WINDOWS_VERSION }}
+            pylint_ignore: '.*linux_.*,.*macos_.*'
+            mypy_exclude: '--exclude "linux_" --exclude "macos_"'
+          - os_name: MacOS
+            runner: ${{ vars.MACOS_VERSION }}
+            pylint_ignore: '.*linux_.*,.*windows_.*'
+            mypy_exclude: '--exclude "linux_" --exclude "windows_"'
+            
     steps:
       - name: 'Checkout code'
         uses: actions/checkout@v4
@@ -22,42 +40,28 @@ jobs:
           cache: 'pip'
 
       - name: 'Install Python dependencies'
+        shell: bash
         run: |
           python -m pip install --upgrade pip
-          pip install pylint
+          pip install pylint mypy
           pip install -r requirements.txt
 
       - name: 'Run Pylint'
+        if: matrix.tool == 'Pylint linting'
         env:
           PYTHONPATH: .
+        shell: bash
         run: |
-          pylint main.py apkviewer/ || [ $(($? & 3)) -eq 0 ]
-
-  mypy:
-    name: '[Mypy] Type Checking'
-    runs-on: ${{ vars.LINUX_VERSION }}
-    permissions:
-      contents: read
-    steps:
-      - name: 'Checkout code'
-        uses: actions/checkout@v4
-
-      - name: 'Set up Python'
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ vars.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: 'Install Python dependencies'
-        run: |
-          python -m pip install --upgrade pip
-          pip install mypy
-          pip install -r requirements.txt
+          pylint main.py apkviewer/ --ignore-paths="${{ matrix.pylint_ignore }}" || [ $(($? & 3)) -eq 0 ]
 
       - name: 'Install Mypy required types'
+        if: matrix.tool == 'Mypy type-checking'
+        shell: bash
         run: |
           mypy --install-types --non-interactive --explicit-package-bases main.py apkviewer/ || true
 
       - name: 'Run Mypy'
+        if: matrix.tool == 'Mypy type-checking'
+        shell: bash
         run: |
-          mypy --explicit-package-bases --ignore-missing-imports main.py apkviewer/
+          mypy --explicit-package-bases --ignore-missing-imports ${{ matrix.mypy_exclude }} main.py apkviewer/

@@ -1,12 +1,12 @@
-name: '[Linux] Build APKViewer'
+name: '[MacOS] Build APKViewer'
 on:
   push:
     tags:
       - 'v*'
 
 jobs:
-  build-linux:
-    runs-on: ${{ vars.LINUX_VERSION }}
+  build-macos:
+    runs-on: ${{ vars.MACOS_VERSION }}
     permissions:
       contents: write
 
@@ -22,8 +22,8 @@ jobs:
 
       - name: 'Install system dependencies'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y patchelf ccache
+          brew update
+          brew install ccache
 
       - name: 'Install Python dependencies'
         run: |
@@ -35,9 +35,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cache/Nuitka
-            ~/.ccache
-            ~/.cache/ccache
+            ~/Library/Caches/Nuitka
+            ~/Library/Caches/ccache
           key: ${{ runner.os }}-nuitka-${{ hashFiles('**/*.py', 'requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-nuitka-
@@ -48,7 +47,7 @@ jobs:
               --standalone \
               --onefile \
               --output-dir=dist \
-              --output-filename=APKViewer-linux.bin \
+              --output-filename=APKViewer-macos.bin \
               --include-package-data=androguard \
               --include-data-dir=assets=assets \
               --enable-plugin=tk-inter \
@@ -61,6 +60,6 @@ jobs:
       - name: 'Upload binary to release'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/APKViewer-linux.bin
+          files: dist/APKViewer-macos.bin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -8,7 +8,7 @@
             "name": "Python3.11 APKViewer .venv",
             "type": "debugpy",
             "request": "launch",
-            "python": "${command:python.interpreterPath}",
+            "python": "${workspaceFolder}/.venv/bin/python3.11",
             "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
             "args": "/home/gmm/9.3.Alternative.apk"
