@@ -12,6 +12,7 @@ class RecordNode:
     cells: tuple[str, ...]
     children: tuple["RecordNode", ...] = ()
     category: str | None = None  # lets a panel show only some of the top-level rows
+    open_by_default: bool = False  # whether its nested rows start expanded
 
     @classmethod
     def create_root(cls) -> "RecordNode":

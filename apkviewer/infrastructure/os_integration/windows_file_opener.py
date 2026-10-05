@@ -31,7 +31,7 @@ class WindowsFileOpener(OsFileOpener):
         WinDLL = getattr(ctypes, "WinDLL")
         shell32 = WinDLL("shell32", use_last_error=True)
         shell32.SHOpenWithDialog.argtypes = [wintypes.HWND, ctypes.POINTER(OPENASINFO)]
-        shell32.SHOpenWithDialog.restype = wintypes.HRESULT
+        shell32.SHOpenWithDialog.restype = wintypes.HRESULT     # type: ignore
         hr = shell32.SHOpenWithDialog(None, ctypes.byref(info))
         if hr != 0:
             raise OSError(f"SHOpenWithDialog failed with HRESULT 0x{hr & 0xffffffff:08X}")

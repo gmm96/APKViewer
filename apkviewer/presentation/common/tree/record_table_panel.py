@@ -78,6 +78,9 @@ class RecordTablePanel(BaseTreePanel[RecordNode]):
     def _node_iid(self, node: RecordNode) -> str:
         return node.iid
 
+    def _default_open(self, node: RecordNode) -> bool:
+        return node.open_by_default
+
     def _insert(self, parent_iid: str, node: RecordNode, iid: str, is_open: bool) -> None:
         values = list(node.cells[1:])
         values += [""] * (len(self._column_ids) - 1 - len(values))

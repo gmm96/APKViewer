@@ -118,6 +118,24 @@ class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
     def apply_palette(self, palette: ThemePalette) -> None:
         self._apply_tree_style(palette)
 
+    def expand_all(self) -> None:
+        """Open every row that is currently listed (respecting the filter / category)."""
+        self._set_all_open(True)
+
+    def collapse_all(self) -> None:
+        self._set_all_open(False)
+
+    def _set_all_open(self, is_open: bool) -> None:
+        self._apply_open_state("", is_open)
+        self._fit_height()
+
+    def _apply_open_state(self, parent_iid: str, is_open: bool) -> None:
+        for iid in self.tree.get_children(parent_iid):
+            if self.tree.get_children(iid):
+                self.tree.item(iid, open=is_open)
+                self._node_states[iid] = is_open  # remembered across filter / category changes
+                self._apply_open_state(iid, is_open)
+
     # --- Construction ------------------------------------------------------------
 
     def _build_tree(self, palette: ThemePalette) -> None:

@@ -36,6 +36,10 @@ class ComponentsPanel(ttk.Frame):
         super().__init__(parent)
         self._tree_builder: ComponentTreeBuilder = tree_builder or ComponentTreeBuilder()
 
+        # First line: category pills (left) and expand / collapse buttons (right).
+        # The table below carries the second line itself: filter and counter.
+        self._toolbar: ttk.Frame = ttk.Frame(self)
+        self._toolbar.pack(fill=tk.X, padx=5, pady=(5, 0))
         self._table: RecordTablePanel = RecordTablePanel(
             self,
             palette,
@@ -43,15 +47,15 @@ class ComponentsPanel(ttk.Frame):
             item_noun="components",
             empty_text="No components declared.",
         )
-        self._table.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        self._banner: WarningBanner = WarningBanner(self, palette, before=self._table)
+        self._table.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
+        self._banner: WarningBanner = WarningBanner(self, palette, before=self._toolbar)
 
         self._selected: tk.StringVar = tk.StringVar(value=_ALL)
         self._pill_labels: dict[str, str] = {_ALL: "All", **dict(ComponentTreeBuilder.GROUPS)}
         self._pills: dict[str, ttk.Radiobutton] = {}
         for key in self._pill_labels:
             pill = ttk.Radiobutton(
-                self._table.filter_bar,
+                self._toolbar,
                 text=self._pill_labels[key],
                 value=key,
                 variable=self._selected,
@@ -59,8 +63,14 @@ class ComponentsPanel(ttk.Frame):
                 takefocus=False,
                 command=self._on_pill_selected,
             )
-            pill.pack(side=tk.LEFT, padx=(0, 4), before=self._table.filter_label)
+            pill.pack(side=tk.LEFT, padx=(0, 4))
             self._pills[key] = pill
+        ttk.Button(
+            self._toolbar, text="Expand all", command=self._table.expand_all, takefocus=False
+        ).pack(side=tk.RIGHT)
+        ttk.Button(
+            self._toolbar, text="Collapse all", command=self._table.collapse_all, takefocus=False
+        ).pack(side=tk.RIGHT, padx=(0, 4))
         self._apply_pill_style(palette)
         self._update_pills({})
 

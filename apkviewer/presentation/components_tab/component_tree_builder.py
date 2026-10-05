@@ -18,6 +18,9 @@ from apkviewer.domain.entities.exported_intent import ExportedIntent
 from apkviewer.presentation.common.tree.record_node import RecordNode
 
 
+_MAX_SUMMARY: int = 110
+
+
 class ComponentTreeBuilder:
     # (category key, label) of the groups the components tab can restrict to.
     GROUPS: tuple[tuple[str, str], ...] = (
@@ -70,18 +73,30 @@ class ComponentTreeBuilder:
     # --- Components ------------------------------------------------------------
 
     def _component_row(self, iid: str, component: Component) -> RecordNode:
-        children = [
-            self._field(f"{iid}/attribute:{name}", name, value)
+        properties = [
+            self._field(f"{iid}/properties/attribute:{name}", name, value)
             for name, value in component.attributes
         ]
-        children += [
-            self._element_row(f"{iid}/element{index}", element)
+        properties += [
+            self._element_row(f"{iid}/properties/element{index}", element)
             for index, element in enumerate(component.elements)
         ]
-        children += [
-            self._filter_row(f"{iid}/filter{index}", intent_filter)
+        filters = [
+            self._filter_row(f"{iid}/filters/filter{index}", intent_filter)
             for index, intent_filter in enumerate(component.intent_filters)
         ]
+        children = []
+        if properties:  # what the manifest declares on the component itself
+            children.append(
+                RecordNode(f"{iid}/properties", (f"Properties ({len(properties)})",), tuple(properties))
+            )
+        if filters:  # the conditions under which other apps can reach it; shown open
+            children.append(
+                RecordNode(
+                    f"{iid}/filters", (f"Intent filters ({len(filters)})",), tuple(filters),
+                    open_by_default=True,
+                )
+            )
         return RecordNode(
             iid=iid,
             cells=(
@@ -118,11 +133,20 @@ class ComponentTreeBuilder:
         )
         return RecordNode(
             iid,
-            ("Intent filter",),
+            (self._filter_summary(intent_filter, data),),
             children=tuple(
                 self._field(f"{iid}/{key}", key, value) for key, value in properties if value
             ),
         )
+
+    @staticmethod
+    def _filter_summary(intent_filter: IntentFilter, data: list[str]) -> str:
+        """What tells one filter from another when it is closed: its actions and its data."""
+        parts = [", ".join(intent_filter.actions), ", ".join(data)]
+        summary = " · ".join(part for part in parts if part)
+        if len(summary) > _MAX_SUMMARY:
+            summary = summary[: _MAX_SUMMARY - 1] + "…"
+        return f"Intent filter: {summary}" if summary else "Intent filter"
 
     @staticmethod
     def _field(iid: str, key: str, value: str) -> RecordNode:
