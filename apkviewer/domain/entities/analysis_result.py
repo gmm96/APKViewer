@@ -5,6 +5,7 @@ data (no third-party types), so any presentation layer can consume it.
 
 from dataclasses import dataclass
 
+from apkviewer.domain.entities.analysis_warning import AnalysisArea
 from apkviewer.domain.entities.apk_inspection import ApkInspection
 from apkviewer.domain.entities.file_node import FileNode
 
@@ -30,6 +31,10 @@ class AnalysisResult:
     @property
     def manifest_xml(self) -> str:
         return self.inspection.manifest_xml
+
+    def warning_messages(self, *areas: AnalysisArea) -> list[str]:
+        """The messages of the warnings that affect any of those areas."""
+        return [w.message for w in self.inspection.warnings if w.area in areas]
 
     @property
     def default_name(self) -> str:

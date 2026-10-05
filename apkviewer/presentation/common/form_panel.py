@@ -16,6 +16,7 @@ from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
 from apkviewer.presentation.common.scrollable_frame import ScrollableFrame
 from apkviewer.presentation.common.text_context_menu import TextContextMenu
 from apkviewer.presentation.common.text_line_marker import TextLineMarker
+from apkviewer.presentation.common.warning_banner import WarningBanner
 from apkviewer.presentation.config.layout import LABEL_WIDTH, MIN_LIST_LINES
 from apkviewer.presentation.config.theme import FONT_MONO_SMALL
 
@@ -38,14 +39,20 @@ class FormPanel(ttk.Frame):
         self.scroll_frame: ScrollableFrame = ScrollableFrame(self, palette)
         self.scroll_frame.pack(expand=True, fill=tk.BOTH)
         self.scroll_frame.inner_frame.columnconfigure(0, weight=1)
+        self._banner: WarningBanner = WarningBanner(self, palette, before=self.scroll_frame)
 
     def apply_palette(self, palette: ThemePalette) -> None:
         self._palette = palette
         self.scroll_frame.apply_palette(palette)
+        self._banner.apply_palette(palette)
         for widget in self._list_widgets:
             self._style_list_widget(widget)
 
+    def show_warnings(self, messages: list[str]) -> None:
+        self._banner.show(messages)
+
     def clear(self) -> None:
+        self._banner.show(())
         self._list_widgets.clear()
         self._next_row = 0
         for widget in self.scroll_frame.inner_frame.winfo_children():

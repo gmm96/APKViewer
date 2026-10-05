@@ -41,6 +41,13 @@ class AppInfoSerializer:
             self._components(inspection.components),
             self._intents(inspection.components.exported_intents()),
         ]
+        if inspection.warnings:
+            blocks.append(
+                self._block(
+                    "Analysis warnings",
+                    [f"- [{warning.area.value}] {warning.message}" for warning in inspection.warnings],
+                )
+            )
         return "\n\n".join(blocks) + "\n"
 
     # --- Sections ------------------------------------------------------------
@@ -67,7 +74,9 @@ class AppInfoSerializer:
     def _configuration(self, info: ConfigurationInfo) -> str:
         architectures = ", ".join(info.architectures) or "None / Unknown (Java only)"
         lines = [f"Architectures: {architectures}"]
-        lines += self._list("Hardware Requirements", info.hardware_requirements)
+        lines += self._list(
+            "Hardware Requirements", [feature.as_text() for feature in info.hardware_requirements]
+        )
         lines += self._list("Supported Locales", info.locales)
         lines += self._list("Screen Densities", info.screen_densities)
         return self._block("Configuration", lines)
@@ -76,7 +85,8 @@ class AppInfoSerializer:
         return self._block("Embedded Content", self._list("Discovered URLs", info.urls))
 
     def _security(self, info: SecurityInfo) -> str:
-        lines = self._list("Permissions", info.permissions)
+        lines = [f"Signature schemes: {', '.join(info.signature_schemes) or 'None (unsigned)'}"]
+        lines += self._list("Permissions", info.permissions)
         lines += self._list("AppOps / Custom Perms", info.custom_permissions)
         lines += self._list("Certificates", [cert.as_text() for cert in info.certificates])
         return self._block("Permissions & Signing", lines)

@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python3.14 APKViewer .venv",
+            "name": "Python3.11 APKViewer .venv",
             "type": "debugpy",
             "request": "launch",
             "python": "${command:python.interpreterPath}",

@@ -14,6 +14,9 @@ from dataclasses import dataclass
 
 from androguard.core.apk import APK
 
+from apkviewer.domain.entities.analysis_warning import AnalysisArea
+from apkviewer.infrastructure.androguard.analysis_warnings import AnalysisWarningCollector
+
 _HEADER_SIZE: int = 0x70
 _CLASS_DEF_WORDS: int = 8  # a class_def_item is 8 uint32 (32 bytes); the first is the class type
 
@@ -25,34 +28,39 @@ class DexContents:
 
 
 class DexReader:
-    def read(self, apk: APK) -> DexContents:
+    def read(self, apk: APK, warnings: AnalysisWarningCollector | None = None) -> DexContents:
         strings: list[str] = []
         class_names: list[str] = []
-        for dex_bytes in apk.get_all_dex():
-            dex_strings, dex_classes = self._parse(dex_bytes)
+        for number, dex_bytes in enumerate(apk.get_all_dex(), start=1):
+            dex_strings, dex_classes, problem = self._parse(dex_bytes)
             strings.extend(dex_strings)
             class_names.extend(dex_classes)
+            if problem and warnings is not None:
+                warnings.add(
+                    f"DEX file #{number} {problem}: embedded URLs and trackers may be incomplete.",
+                    AnalysisArea.INFO, AnalysisArea.SECURITY,
+                )
         return DexContents(strings=tuple(strings), class_names=tuple(class_names))
 
     @classmethod
-    def _parse(cls, data: bytes) -> tuple[list[str], list[str]]:
-        """(strings, class names) of one DEX; whatever can't be read comes back empty."""
+    def _parse(cls, data: bytes) -> tuple[list[str], list[str], str | None]:
+        """(strings, class names, problem) of one DEX; whatever can't be read comes back empty."""
         if len(data) < _HEADER_SIZE or not data.startswith(b"dex\n"):
-            return [], []
+            return [], [], "is not a valid DEX file"
         try:
             (string_count, string_off, type_count, type_off,
              _, _, _, _, _, _, class_count, class_off) = struct.unpack_from("<12I", data, 56)
             strings = cls._read_strings(data, string_count, string_off)
         except (struct.error, IndexError):
-            return [], []
+            return [], [], "could not be read (corrupt string table)"
 
         try:
             type_to_string = struct.unpack_from(f"<{type_count}I", data, type_off)
             class_words = struct.unpack_from(f"<{class_count * _CLASS_DEF_WORDS}I", data, class_off)
             class_names = [strings[type_to_string[idx]] for idx in class_words[::_CLASS_DEF_WORDS]]
         except (struct.error, IndexError):
-            class_names = []
-        return strings, class_names
+            return strings, [], "has unreadable class tables"
+        return strings, class_names, None
 
     @staticmethod
     def _read_strings(data: bytes, count: int, table_off: int) -> list[str]:

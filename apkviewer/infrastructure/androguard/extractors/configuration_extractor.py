@@ -15,7 +15,12 @@ from androguard.core.apk import APK
 from babel import Locale
 from babel.core import UnknownLocaleError
 
-from apkviewer.domain.entities.configuration_info import ConfigurationInfo
+from apkviewer.domain.entities.analysis_warning import AnalysisArea
+from apkviewer.domain.entities.configuration_info import ConfigurationInfo, HardwareFeature
+from apkviewer.infrastructure.androguard.analysis_warnings import AnalysisWarningCollector
+from apkviewer.infrastructure.androguard.config.android import ANDROID_NS
+from apkviewer.infrastructure.androguard.manifest_value_formatter import ManifestValueFormatter
+from apkviewer.infrastructure.androguard.resource_reference_resolver import ResourceReferenceResolver
 
 
 class ConfigurationExtractor:
@@ -45,13 +50,68 @@ class ConfigurationExtractor:
         "nodpi": "No scaling",
     }
 
-    def extract(self, apk: APK) -> ConfigurationInfo:
+    def extract(
+        self, apk: APK, warnings: AnalysisWarningCollector | None = None
+    ) -> ConfigurationInfo:
+        if warnings is not None and not self._has_resource_table(apk):
+            warnings.add(
+                "The resource table (resources.arsc) is missing or unreadable: "
+                "locales and screen densities may be missing or incomplete.",
+                AnalysisArea.INFO,
+            )
         return ConfigurationInfo(
             architectures=self._architectures(apk),
-            hardware_requirements=tuple(sorted(apk.get_features())),
+            hardware_requirements=self._hardware_features(apk),
             locales=self._extract_locales(apk),
             screen_densities=self._extract_densities(apk),
         )
+
+    @staticmethod
+    def _hardware_features(apk: APK) -> tuple[HardwareFeature, ...]:
+        """The <uses-feature> declarations, each with whether the app requires it."""
+        try:
+            root = apk.get_android_manifest_xml()
+            if root is None:
+                return ()
+            formatter = ManifestValueFormatter(ResourceReferenceResolver(apk))
+            features: dict[str, HardwareFeature] = {}
+            for node in root.iter("uses-feature"):
+                name = node.get(f"{ANDROID_NS}name") or ConfigurationExtractor._gl_version(
+                    node.get(f"{ANDROID_NS}glEsVersion")
+                )
+                if not name:
+                    continue
+                required = ConfigurationExtractor._parse_required(
+                    formatter.declared(node.get(f"{ANDROID_NS}required"))
+                )
+                known = features.get(name)
+                if known is None or (required is not False and known.required is False):
+                    features[name] = HardwareFeature(name, required)  # "required" wins over "optional"
+            return tuple(sorted(features.values(), key=lambda feature: feature.name.lower()))
+        except Exception:
+            return ()
+
+    @staticmethod
+    def _parse_required(value: str | None) -> bool | None:
+        if value is None:
+            return True  # not declared: required
+        return {"true": True, "1": True, "false": False, "0": False}.get(value.strip().lower())
+
+    @staticmethod
+    def _gl_version(raw: str | None) -> str | None:
+        try:
+            number = int(raw, 0) if raw else None
+        except ValueError:
+            return None
+        return None if number is None else f"OpenGL ES {number >> 16}.{number & 0xFFFF}"
+
+    @staticmethod
+    def _has_resource_table(apk: APK) -> bool:
+        try:
+            arsc = apk.get_android_resources()
+            return bool(arsc and arsc.get_packages_names())
+        except Exception:
+            return False
 
     @staticmethod
     def _architectures(apk: APK) -> tuple[str, ...]:

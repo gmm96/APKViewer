@@ -18,6 +18,7 @@ from apkviewer.application.export_icon import ExportIcon
 from apkviewer.application.extract_apk_entries import ExtractApkEntries
 from apkviewer.application.resolve_color_scheme import ResolveColorScheme
 from apkviewer.domain.entities.analysis_result import AnalysisResult
+from apkviewer.domain.entities.analysis_warning import AnalysisArea
 from apkviewer.domain.entities.color_mode import ColorMode
 from apkviewer.domain.interfaces.url_opener import UrlOpener
 from apkviewer.domain.interfaces.size_formatter import SizeFormatter
@@ -150,7 +151,7 @@ class ApkAnalyzerApp:
         notebook.add(self.info_panel, text="Info")
         notebook.add(self.security_panel, text="Security")
         notebook.add(self.components_panel, text="Components")
-        notebook.add(self.intents_panel, text="Exported Intents")
+        notebook.add(self.intents_panel, text="Intents")
         notebook.add(self.manifest_panel, text="Manifest")
         notebook.add(self.files_panel, text="Files")
 
@@ -249,7 +250,15 @@ class ApkAnalyzerApp:
             self._report_failure(str(exc))
         else:
             self.root.after(0, lambda: self._render_result(result))
-            self._set_status("Analysis completed successfully.", StatusLevel.SUCCESS)
+            count = len(result.inspection.warnings)
+            if count:
+                self._set_status(
+                    f"Analysis completed with {count} warning(s): some data could not be read "
+                    "(see the notice at the top of the tabs).",
+                    StatusLevel.INFO,
+                )
+            else:
+                self._set_status("Analysis completed successfully.", StatusLevel.SUCCESS)
         finally:
             self.root.after(0, lambda: self._set_loading(False))
 
@@ -289,4 +298,9 @@ class ApkAnalyzerApp:
         self.intents_panel.render(inspection.components.exported_intents())
         self.manifest_panel.render(result.manifest_xml)
         self.files_panel.render(result.apk_path, result.file_tree)
+        components_warnings = result.warning_messages(AnalysisArea.COMPONENTS)
+        self.info_panel.show_warnings(result.warning_messages(AnalysisArea.INFO, AnalysisArea.ICON))
+        self.security_panel.show_warnings(result.warning_messages(AnalysisArea.SECURITY))
+        self.components_panel.show_warnings(components_warnings)
+        self.intents_panel.show_warnings(components_warnings)
         self.menu_bar.set_enabled(self._ANALYSIS_DEPENDENT_ITEMS, True)

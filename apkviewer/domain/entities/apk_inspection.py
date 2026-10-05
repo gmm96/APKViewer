@@ -5,6 +5,7 @@ the archive's file tree, which is obtained through a separate port.
 
 from dataclasses import dataclass
 
+from apkviewer.domain.entities.analysis_warning import AnalysisWarning
 from apkviewer.domain.entities.application_info import ApplicationInfo
 from apkviewer.domain.entities.components import DeclaredComponents
 from apkviewer.domain.entities.configuration_info import ConfigurationInfo
@@ -23,3 +24,4 @@ class ApkInspection:
     components: DeclaredComponents
     icon_png: bytes | None
     manifest_xml: str
+    warnings: tuple[AnalysisWarning, ...] = ()

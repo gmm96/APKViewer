@@ -11,6 +11,7 @@ from tkinter import ttk
 from apkviewer.domain.entities.components import DeclaredComponents
 from apkviewer.presentation.appearance.theme_palette import ThemePalette
 from apkviewer.presentation.common.tree.record_table_panel import RecordTablePanel
+from apkviewer.presentation.common.warning_banner import WarningBanner
 from apkviewer.presentation.common.tree.tree_column import TreeColumn
 from apkviewer.presentation.components_tab.component_tree_builder import ComponentTreeBuilder
 
@@ -43,6 +44,7 @@ class ComponentsPanel(ttk.Frame):
             empty_text="No components declared.",
         )
         self._table.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self._banner: WarningBanner = WarningBanner(self, palette, before=self._table)
 
         self._selected: tk.StringVar = tk.StringVar(value=_ALL)
         self._pill_labels: dict[str, str] = {_ALL: "All", **dict(ComponentTreeBuilder.GROUPS)}
@@ -64,9 +66,14 @@ class ComponentsPanel(ttk.Frame):
 
     def apply_palette(self, palette: ThemePalette) -> None:
         self._table.apply_palette(palette)
+        self._banner.apply_palette(palette)
         self._apply_pill_style(palette)
 
+    def show_warnings(self, messages: list[str]) -> None:
+        self._banner.show(messages)
+
     def clear(self) -> None:
+        self._banner.show(())
         self._selected.set(_ALL)
         self._table.set_category(None, refresh=False)
         self._table.clear()

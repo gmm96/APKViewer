@@ -11,6 +11,7 @@ from tkinter import ttk
 from apkviewer.domain.entities.exported_intent import ExportedIntent
 from apkviewer.presentation.appearance.theme_palette import ThemePalette
 from apkviewer.presentation.common.tree.record_table_panel import RecordTablePanel
+from apkviewer.presentation.common.warning_banner import WarningBanner
 from apkviewer.presentation.common.tree.tree_column import TreeColumn
 from apkviewer.presentation.components_tab.component_tree_builder import ComponentTreeBuilder
 
@@ -41,11 +42,17 @@ class IntentsPanel(ttk.Frame):
             empty_text="No exported intents.",
         )
         self._table.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self._banner: WarningBanner = WarningBanner(self, palette, before=self._table)
 
     def apply_palette(self, palette: ThemePalette) -> None:
         self._table.apply_palette(palette)
+        self._banner.apply_palette(palette)
+
+    def show_warnings(self, messages: list[str]) -> None:
+        self._banner.show(messages)
 
     def clear(self) -> None:
+        self._banner.show(())
         self._table.clear()
 
     def render(self, intents: Sequence[ExportedIntent]) -> None:

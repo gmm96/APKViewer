@@ -59,7 +59,10 @@ class InfoPanel(FormPanel):
             "Architectures",
             ", ".join(configuration.architectures) or "None / Unknown (Java only)",
         )
-        section.add_list("Hardware Requirements", configuration.hardware_requirements)
+        section.add_list(
+            "Hardware Requirements",
+            [feature.as_text() for feature in configuration.hardware_requirements],
+        )
         section.add_list("Supported Locales", configuration.locales)
         section.add_list("Screen Densities", configuration.screen_densities)
 

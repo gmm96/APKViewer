@@ -19,12 +19,21 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ vars.PYTHON_VERSION }}
+          cache: 'pip'
 
       - name: 'Install Python dependencies'
         run: |
           & "$env:pythonLocation\python.exe" -m pip install --upgrade pip
           & "$env:pythonLocation\python.exe" -m pip install -r requirements.txt
           & "$env:pythonLocation\python.exe" -m pip install nuitka zstandard
+
+      - name: 'Cache Nuitka'
+        uses: actions/cache@v4
+        with:
+          path: ~/AppData/Local/Nuitka/Nuitka
+          key: ${{ runner.os }}-nuitka-${{ hashFiles('**/*.py', 'requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-nuitka-
 
       - name: 'Build executable with Nuitka'
         run: |
