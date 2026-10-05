@@ -7,24 +7,24 @@ on:
 
 jobs:
   quality-checks:
-    name: '[${{ matrix.os_name }}] ${{ matrix.tool }}'
-    runs-on: ${{ matrix.runner }}
+    name: '[${{ matrix.os.name }}] ${{ matrix.tool }}'
+    runs-on: ${{ matrix.os.runner }}
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
-        tool: [Pylint linting, Mypy type-checking]
-        include:
-          - os_name: Linux
+        tool: ['Pylint linting', 'Mypy type-checking']
+        os:
+          - name: 'Linux'
             runner: ${{ vars.LINUX_VERSION }}
             pylint_ignore: '.*windows_.*,.*macos_.*'
             mypy_exclude: '--exclude "windows_" --exclude "macos_"'
-          - os_name: Windows
+          - name: 'Windows'
             runner: ${{ vars.WINDOWS_VERSION }}
             pylint_ignore: '.*linux_.*,.*macos_.*'
             mypy_exclude: '--exclude "linux_" --exclude "macos_"'
-          - os_name: MacOS
+          - name: 'MacOS'
             runner: ${{ vars.MACOS_VERSION }}
             pylint_ignore: '.*linux_.*,.*windows_.*'
             mypy_exclude: '--exclude "linux_" --exclude "windows_"'
@@ -52,7 +52,7 @@ jobs:
           PYTHONPATH: .
         shell: bash
         run: |
-          pylint main.py apkviewer/ --ignore-paths="${{ matrix.pylint_ignore }}" || [ $(($? & 3)) -eq 0 ]
+          pylint main.py apkviewer/ --ignore-paths="${{ matrix.os.pylint_ignore }}" || [ $(($? & 3)) -eq 0 ]
 
       - name: 'Install Mypy required types'
         if: matrix.tool == 'Mypy type-checking'
@@ -64,4 +64,4 @@ jobs:
         if: matrix.tool == 'Mypy type-checking'
         shell: bash
         run: |
-          mypy --explicit-package-bases --ignore-missing-imports ${{ matrix.mypy_exclude }} main.py apkviewer/
+          mypy --explicit-package-bases --ignore-missing-imports ${{ matrix.os.mypy_exclude }} main.py apkviewer/
