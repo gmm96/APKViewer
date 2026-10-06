@@ -6,6 +6,7 @@ whenever the field has text and hidden when it is empty.
 import tkinter as tk
 from collections.abc import Callable
 from tkinter import ttk
+from typing import Any
 
 from apkviewer.presentation.icons.field_icons import ENTRY_STYLE, FieldIcons
 
@@ -16,7 +17,7 @@ class ClearableEntry(ttk.Entry):
         parent: tk.Misc,
         icons: FieldIcons,
         on_clear: Callable[[], None] | None = None,
-        **options: object,
+        **options: Any,
     ) -> None:
         FieldIcons.configure_entry_style()
         self._variable: tk.StringVar = tk.StringVar(master=parent)
