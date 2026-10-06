@@ -70,6 +70,18 @@ class FilesPanel(BaseTreePanel[FileNode]):
         self._icon_folder: ImageTk.PhotoImage = self._icon_loader.load_icon(
             "assets/icons/color/directory.png", padding_left=4, padding_right=8
         )
+        self._icon_xml: ImageTk.PhotoImage = self._icon_loader.load_icon(
+            "assets/icons/color/xml.png", padding_left=4, padding_right=8
+        )
+        self._icon_image: ImageTk.PhotoImage = self._icon_loader.load_icon(
+            "assets/icons/color/image.png", padding_left=4, padding_right=8
+        )
+        self._icon_rsa: ImageTk.PhotoImage = self._icon_loader.load_icon(
+            "assets/icons/color/rsa.png", padding_left=4, padding_right=8
+        )
+
+
+
 
         super().__init__(parent, palette, _COLUMNS)  # fills the available space (no row limit)
 
@@ -144,7 +156,7 @@ class FilesPanel(BaseTreePanel[FileNode]):
         if node.is_file:
             type_label = f"{node.extension} File" if node.extension else "File"
             self.tree.insert(
-                parent_iid, tk.END, iid=iid, text=node.name, image=self._icon_file,
+                parent_iid, tk.END, iid=iid, text=node.name, image=self._get_icon(node),
                 values=(type_label, size_str, compressed_str, modified_str), tags=("file",),
             )
         else:
@@ -153,6 +165,17 @@ class FilesPanel(BaseTreePanel[FileNode]):
                 values=(f"Directory ({len(node.children)})", size_str, compressed_str, modified_str),
                 open=is_open, tags=("folder",),
             )
+
+    def _get_icon(self, node: FileNode) -> ImageTk.PhotoImage:
+        match node.extension:
+            case "XML":
+                return self._icon_xml
+            case "PNG" | "JPG" | "JPEG" | "GIF" | "WEBP" | "BMP" | "ICO" | "SVG":
+                return self._icon_image
+            case "RSA":
+                return self._icon_rsa
+            case _:
+                return self._icon_file
 
     @staticmethod
     def _format_modified(modified: datetime | None) -> str:
