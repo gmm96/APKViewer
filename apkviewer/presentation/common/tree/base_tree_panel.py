@@ -21,7 +21,10 @@ from typing import Generic, TypeVar
 
 from apkviewer.presentation.appearance.theme_palette import ThemePalette
 from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
+from apkviewer.presentation.common.clearable_entry import ClearableEntry
 from apkviewer.presentation.common.tree.tree_column import TreeColumn
+from apkviewer.presentation.icons.field_icons import FieldIcons
+from apkviewer.presentation.icons.icon_loader import IconLoader
 
 NodeT = TypeVar("NodeT")
 
@@ -53,6 +56,8 @@ class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
         self._filtering: bool = False
         self._tree_row: int = 1 if filter_on_top else 0
         self._filter_row: int = 0 if filter_on_top else 2
+
+        self._field_icons: FieldIcons = FieldIcons(IconLoader(), palette)
 
         self.rowconfigure(self._tree_row, weight=1)
         self.columnconfigure(0, weight=1)
@@ -117,6 +122,8 @@ class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
 
     def apply_palette(self, palette: ThemePalette) -> None:
         self._apply_tree_style(palette)
+        self._field_icons.apply_palette(palette)
+        self.filter_entry.refresh_icons()
 
     def expand_all(self) -> None:
         """Open every row that is currently listed (respecting the filter / category)."""
@@ -180,7 +187,9 @@ class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
         self.filter_bar: ttk.Frame = filter_frame
         self.filter_label: ttk.Label = ttk.Label(filter_frame, text="Filter:")
         self.filter_label.pack(side=tk.LEFT)
-        self.filter_entry: ttk.Entry = ttk.Entry(filter_frame)
+        self.filter_entry: ClearableEntry = ClearableEntry(
+            filter_frame, self._field_icons, on_clear=self._apply_filter
+        )
         self.filter_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         self.filter_entry.bind("<KeyRelease>", lambda _event: self._apply_filter())
 
