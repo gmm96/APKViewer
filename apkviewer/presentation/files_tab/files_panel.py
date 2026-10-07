@@ -80,9 +80,6 @@ class FilesPanel(BaseTreePanel[FileNode]):
             "assets/icons/color/rsa.png", padding_left=4, padding_right=8
         )
 
-
-
-
         super().__init__(parent, palette, _COLUMNS)  # fills the available space (no row limit)
 
         self._context_menu: FilesContextMenu = FilesContextMenu(

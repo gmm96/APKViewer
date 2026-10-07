@@ -1,6 +1,5 @@
 """
-Extracts permissions, custom app-ops, signing certificates and the APK
-signature schemes in use.
+Extracts the signing certificates and the APK signature schemes in use.
 """
 
 import hashlib
@@ -24,14 +23,7 @@ class SecurityInfoExtractor:
     )
 
     def extract(self, apk: APK, warnings: AnalysisWarningCollector | None = None) -> SecurityInfo:
-        perms: list[str] = []
-        appops: list[str] = []
-        for permission in apk.get_permissions():
-            (perms if permission.startswith("android.permission.") else appops).append(permission)
-
         return SecurityInfo(
-            permissions=tuple(sorted(perms)),
-            custom_permissions=tuple(sorted(appops)),
             certificates=tuple(self._to_certificate(cert) for cert in apk.get_certificates()),
             signature_schemes=self._signature_schemes(apk, warnings),
         )

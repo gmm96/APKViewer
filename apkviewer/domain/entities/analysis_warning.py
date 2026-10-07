@@ -11,6 +11,7 @@ from enum import Enum
 class AnalysisArea(Enum):
     INFO = "info"              # Info tab
     SECURITY = "security"      # Security tab
+    PERMISSIONS = "permissions"  # Permissions tab
     COMPONENTS = "components"  # Components and Intents tabs
     ICON = "icon"              # the header icon (shown with the Info tab)
 

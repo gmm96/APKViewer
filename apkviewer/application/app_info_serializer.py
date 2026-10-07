@@ -13,6 +13,7 @@ from apkviewer.domain.entities.components import Component, DeclaredComponents
 from apkviewer.domain.entities.configuration_info import ConfigurationInfo
 from apkviewer.domain.entities.embedded_content import EmbeddedContent
 from apkviewer.domain.entities.exported_intent import ExportedIntent
+from apkviewer.domain.entities.permission import Permission, PermissionOrigin, PermissionsInfo
 from apkviewer.domain.entities.security_info import SecurityInfo
 from apkviewer.domain.entities.third_party_info import ThirdPartyInfo
 from apkviewer.domain.interfaces.date_formatter import DateFormatter
@@ -37,6 +38,7 @@ class AppInfoSerializer:
             self._configuration(inspection.configuration),
             self._embedded_content(inspection.embedded_content),
             self._security(inspection.security),
+            self._permissions(inspection.permissions),
             self._third_party(inspection.third_party),
             self._components(inspection.components),
             self._intents(inspection.components.exported_intents()),
@@ -86,10 +88,31 @@ class AppInfoSerializer:
 
     def _security(self, info: SecurityInfo) -> str:
         lines = [f"Signature schemes: {', '.join(info.signature_schemes) or 'None (unsigned)'}"]
-        lines += self._list("Permissions", info.permissions)
-        lines += self._list("AppOps / Custom Perms", info.custom_permissions)
         lines += self._list("Certificates", [cert.as_text() for cert in info.certificates])
-        return self._block("Permissions & Signing", lines)
+        return self._block("Signing", lines)
+
+    def _permissions(self, info: PermissionsInfo) -> str:
+        lines: list[str] = []
+        for label, group in (
+            ("Permissions", info.permissions),
+            ("AppOps (special access)", info.app_ops),
+            ("Custom permissions", info.custom_permissions),
+        ):
+            lines += self._list(label, [self._permission_text(permission) for permission in group])
+        return self._block("Permissions", lines)
+
+    @staticmethod
+    def _permission_text(permission: Permission) -> str:
+        lines = [f"{permission.name} [{permission.type_text}]"]
+        if permission.origin is not PermissionOrigin.REQUESTED:
+            lines.append(f"Origin: {permission.origin.value}")
+        if permission.max_sdk:
+            lines.append(f"Max SDK: {permission.max_sdk}")
+        if permission.label:
+            lines.append(f"Summary: {permission.label}")
+        if permission.description:
+            lines.append(f"Description: {permission.description}")
+        return "\n".join(lines)
 
     def _third_party(self, info: ThirdPartyInfo) -> str:
         lines = self._list("Libraries", info.libraries)

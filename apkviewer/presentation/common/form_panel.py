@@ -13,6 +13,7 @@ from typing import Any
 from apkviewer.presentation.appearance.theme_palette import ThemePalette
 from apkviewer.presentation.appearance.tk_widget_styler import TkWidgetStyler
 from apkviewer.presentation.common.auto_hide_scrollbar import AutoHideScrollbar
+from apkviewer.presentation.common.copy_icon_overlay import CopyIconOverlay
 from apkviewer.presentation.common.copyable_entry import CopyableEntry
 from apkviewer.presentation.common.scrollable_frame import ScrollableFrame
 from apkviewer.presentation.common.text_context_menu import TextContextMenu
@@ -43,6 +44,7 @@ class FormPanel(ttk.Frame):
         self._icons: FieldIcons = FieldIcons(icon_loader or IconLoader(), palette)
         self._list_widgets: list[tk.Text] = []
         self._copy_entries: list[CopyableEntry] = []
+        self._list_copy_icons: list[CopyIconOverlay] = []
         self._chips: list[tuple[tk.Label, str]] = []
         self._muted_labels: list[ttk.Label] = []
         self._next_row: int = 0
@@ -61,6 +63,9 @@ class FormPanel(ttk.Frame):
             self._style_list_widget(widget)
         for entry in self._copy_entries:
             entry.refresh_icons()
+        for overlay in self._list_copy_icons:
+            overlay.refresh_icons()
+            overlay.set_background(palette.text_bg)
         for chip, kind in self._chips:
             self._style_chip(chip, kind)
         for label in self._muted_labels:
@@ -73,6 +78,7 @@ class FormPanel(ttk.Frame):
         self._banner.show(())
         self._list_widgets.clear()
         self._copy_entries.clear()
+        self._list_copy_icons.clear()
         self._chips.clear()
         self._muted_labels.clear()
         self._next_row = 0
@@ -119,7 +125,10 @@ class FormPanel(ttk.Frame):
             highlightthickness=1, highlightbackground=border, highlightcolor=border,
         )
 
-    def build_list_widget(self, container: ttk.Frame, text: str, line_count: int) -> None:
+    def build_list_widget(
+        self, container: ttk.Frame, text: str, line_count: int, copy_text: str | None = None
+    ) -> None:
+        """`copy_text`: what the copy icon of the box copies (None: no icon, e.g. an empty list)."""
         text_widget = tk.Text(
             container,
             height=line_count,
@@ -138,6 +147,13 @@ class FormPanel(ttk.Frame):
         self._list_widgets.append(text_widget)
         self._style_list_widget(text_widget)
         self._context_menu.attach(text_widget)
+        if copy_text:
+            self._list_copy_icons.append(
+                CopyIconOverlay(
+                    text_widget, self._icons, lambda: copy_text,
+                    background=self._palette.text_bg, top_offset=4,
+                )
+            )
 
     def _style_list_widget(self, text_widget: tk.Text) -> None:
         TkWidgetStyler.style_text(text_widget, self._palette)
@@ -180,7 +196,9 @@ class FormSection:
         container.grid(row=self._row, column=1, sticky="ew", padx=10, pady=5)
         container.columnconfigure(0, weight=1)
         container.rowconfigure(0, weight=1)
-        self._panel.build_list_widget(container, text, line_count)
+        self._panel.build_list_widget(
+            container, text, line_count, copy_text=separator.join(items) if items else None
+        )
         self._row += 1
 
 

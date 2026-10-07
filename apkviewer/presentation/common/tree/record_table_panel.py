@@ -5,7 +5,7 @@ for rows that have nested rows, an expander showing the detail.
 """
 
 import tkinter as tk
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from tkinter import ttk
 
@@ -29,7 +29,10 @@ class RecordTablePanel(BaseTreePanel[RecordNode]):
         item_noun: str = "items",
         empty_text: str = "Nothing to show.",
         filter_on_top: bool = True,
+        row_styles: Mapping[str, Callable[[ThemePalette], str]] | None = None,
     ) -> None:
+        """`row_styles`: style name -> function giving its text color from the palette."""
+        self._row_styles: dict[str, Callable[[ThemePalette], str]] = dict(row_styles or {})
         self._sort_column: str = columns[0].id
         self._reverse: bool = False
         self._category: str | None = None
@@ -86,7 +89,8 @@ class RecordTablePanel(BaseTreePanel[RecordNode]):
         values += [""] * (len(self._column_ids) - 1 - len(values))
         self.tree.insert(
             parent_iid, tk.END, iid=iid, text=node.cells[0] if node.cells else "",
-            values=values, open=is_open, tags=(_TAG,),
+            values=values, open=is_open,
+            tags=(_TAG, node.style) if node.style else (_TAG,),
         )
 
     def _sort_state(self) -> tuple[str, bool]:
@@ -101,6 +105,8 @@ class RecordTablePanel(BaseTreePanel[RecordNode]):
 
     def _configure_tags(self, palette: ThemePalette) -> None:
         self.tree.tag_configure(_TAG, font=FONT_MONO_SMALL)
+        for style, color_of in self._row_styles.items():
+            self.tree.tag_configure(style, foreground=color_of(palette))
 
     def _after_rebuild(self, displayed_root: RecordNode) -> None:
         shown = len(displayed_root.children)

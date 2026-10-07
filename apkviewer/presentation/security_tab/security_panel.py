@@ -1,7 +1,7 @@
 """
 "Security" tab: the APK signature schemes (a table with the status of each),
 one card per signing certificate (identity, validity, key, fingerprints),
-permissions, trackers and third-party libraries.
+trackers and third-party libraries.
 
 Certificate values are selectable fields (with a copy icon) because a
 fingerprint is something to copy: VirusTotal, `apksigner` comparisons...
@@ -48,14 +48,7 @@ class SecurityPanel(FormPanel):
         for number, certificate in enumerate(security.certificates, start=1):
             self._render_certificate(number, total, certificate, now)
         if not total:
-            self.add_section("Signing certificate").add_entry(
-                "Certificate",
-                "None found (unsigned APK)"
-            )
-
-        section = self.add_section("Permissions")
-        section.add_list("Permissions", security.permissions)
-        section.add_list("AppOps / Custom Perms", security.custom_permissions)
+            self.add_section("Signing certificate").add_entry("Certificate", "None found (unsigned APK)")
 
         section = self.add_section("Third-party Code")
         section.add_list("Libraries", third_party.libraries)
@@ -65,14 +58,10 @@ class SecurityPanel(FormPanel):
 
     def _render_schemes(self, present: tuple[str, ...]) -> None:
         frame = self.add_section("Signature schemes").frame
-
-        #frame.columnconfigure(4, weight=1)
-        
-        frame.columnconfigure(0, weight=1, uniform="col") 
+        frame.columnconfigure(0, weight=1, uniform="col")
         frame.columnconfigure(1, weight=1, uniform="col")
         frame.columnconfigure(2, weight=1, uniform="col")
-        frame.columnconfigure(3, weight=2, uniform="col") # Más espacio para las notas
-        
+        frame.columnconfigure(3, weight=2, uniform="col")
         for column, title in enumerate(("Scheme", "Status", "Android", "Note")):
             self.create_muted_label(frame, title).grid(
                 row=0, column=column, sticky="w", padx=10, pady=(6, 4)
@@ -131,9 +120,7 @@ class SecurityPanel(FormPanel):
 
     @staticmethod
     def _add_group(
-        section: FormSection,
-        title: str,
-        rows: tuple[tuple[str, str | None], ...]
+        section: FormSection, title: str, rows: tuple[tuple[str, str | None], ...]
     ) -> None:
         readable = [(label, value) for label, value in rows if value]
         if not readable:

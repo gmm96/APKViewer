@@ -19,6 +19,7 @@ from apkviewer.domain.entities.application_info import ApplicationInfo
 from apkviewer.domain.entities.components import DeclaredComponents
 from apkviewer.domain.entities.configuration_info import ConfigurationInfo
 from apkviewer.domain.entities.embedded_content import EmbeddedContent
+from apkviewer.domain.entities.permission import PermissionsInfo
 from apkviewer.domain.entities.security_info import SecurityInfo
 from apkviewer.domain.entities.third_party_info import ThirdPartyInfo
 from apkviewer.domain.interfaces.apk_inspector import ApkInspector
@@ -29,6 +30,7 @@ from apkviewer.infrastructure.androguard.extractors.app_info_extractor import Ap
 from apkviewer.infrastructure.androguard.extractors.components_extractor import ComponentsExtractor
 from apkviewer.infrastructure.androguard.extractors.configuration_extractor import ConfigurationExtractor
 from apkviewer.infrastructure.androguard.extractors.embedded_content_extractor import EmbeddedContentExtractor
+from apkviewer.infrastructure.androguard.extractors.permissions_extractor import PermissionsExtractor
 from apkviewer.infrastructure.androguard.extractors.security_info_extractor import SecurityInfoExtractor
 from apkviewer.infrastructure.androguard.extractors.tracker_detector import TrackerDetector
 from apkviewer.infrastructure.androguard.icon_extractor import IconExtractor
@@ -50,6 +52,7 @@ class AndroguardApkInspector(ApkInspector):
         configuration_extractor: ConfigurationExtractor | None = None,
         embedded_content_extractor: EmbeddedContentExtractor | None = None,
         security_extractor: SecurityInfoExtractor | None = None,
+        permissions_extractor: PermissionsExtractor | None = None,
         tracker_detector: TrackerDetector | None = None,
         components_extractor: ComponentsExtractor | None = None,
     ) -> None:
@@ -61,6 +64,7 @@ class AndroguardApkInspector(ApkInspector):
         self._configuration = configuration_extractor or ConfigurationExtractor()
         self._embedded_content = embedded_content_extractor or EmbeddedContentExtractor()
         self._security = security_extractor or SecurityInfoExtractor()
+        self._permissions = permissions_extractor or PermissionsExtractor()
         self._trackers = tracker_detector or TrackerDetector()
         self._components = components_extractor or ComponentsExtractor()
 
@@ -88,8 +92,12 @@ class AndroguardApkInspector(ApkInspector):
                 lambda: self._embedded_content.extract(dex), EmbeddedContent(()),
             ),
             security=guard(
-                warnings, "The permissions and signatures", (sec,),
-                lambda: self._security.extract(apk, warnings), SecurityInfo((), (), ()),
+                warnings, "The signatures", (sec,),
+                lambda: self._security.extract(apk, warnings), SecurityInfo(()),
+            ),
+            permissions=guard(
+                warnings, "The permissions", (AnalysisArea.PERMISSIONS,),
+                lambda: self._permissions.extract(apk, warnings), PermissionsInfo(),
             ),
             third_party=guard(
                 warnings, "The third-party code", (sec,),

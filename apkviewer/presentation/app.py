@@ -36,6 +36,7 @@ from apkviewer.presentation.icons.icon_loader import IconLoader
 from apkviewer.presentation.info_tab.info_panel import InfoPanel
 from apkviewer.presentation.intents_tab.intents_panel import IntentsPanel
 from apkviewer.presentation.manifest_tab.manifest_panel import ManifestPanel
+from apkviewer.presentation.permissions_tab.permissions_panel import PermissionsPanel
 from apkviewer.presentation.security_tab.security_panel import SecurityPanel
 from apkviewer.presentation.toolbar.app_toolbar import AppToolbar
 from apkviewer.presentation.toolbar.file.file_menu import FileMenu
@@ -108,6 +109,7 @@ class ApkAnalyzerApp:
             self.menu_bar.apply_palette,
             self.info_panel.apply_palette,
             self.security_panel.apply_palette,
+            self.permissions_panel.apply_palette,
             self.components_panel.apply_palette,
             self.intents_panel.apply_palette,
             self.manifest_panel.apply_palette,
@@ -136,6 +138,7 @@ class ApkAnalyzerApp:
             date_formatter=self._date_formatter,
         )
         self.security_panel: SecurityPanel = SecurityPanel(notebook, self.context_menu, palette)
+        self.permissions_panel: PermissionsPanel = PermissionsPanel(notebook, palette)
         self.components_panel: ComponentsPanel = ComponentsPanel(notebook, palette)
         self.intents_panel: IntentsPanel = IntentsPanel(notebook, palette)
         self.manifest_panel: ManifestPanel = ManifestPanel(notebook, self.context_menu, palette)
@@ -150,6 +153,7 @@ class ApkAnalyzerApp:
 
         notebook.add(self.info_panel, text="Info")
         notebook.add(self.security_panel, text="Security")
+        notebook.add(self.permissions_panel, text="Permissions")
         notebook.add(self.components_panel, text="Components")
         notebook.add(self.intents_panel, text="Intents")
         notebook.add(self.manifest_panel, text="Manifest")
@@ -231,6 +235,7 @@ class ApkAnalyzerApp:
         self.header.reset_to_placeholder(os.path.basename(apk_path))
         self.info_panel.clear()
         self.security_panel.clear()
+        self.permissions_panel.clear()
         self.components_panel.clear()
         self.intents_panel.clear()
         self.manifest_panel.clear()
@@ -294,6 +299,7 @@ class ApkAnalyzerApp:
             inspection.application, inspection.configuration, inspection.embedded_content
         )
         self.security_panel.render(inspection.security, inspection.third_party)
+        self.permissions_panel.render(inspection.permissions)
         self.components_panel.render(inspection.components)
         self.intents_panel.render(inspection.components.exported_intents())
         self.manifest_panel.render(result.manifest_xml)
@@ -301,6 +307,7 @@ class ApkAnalyzerApp:
         components_warnings = result.warning_messages(AnalysisArea.COMPONENTS)
         self.info_panel.show_warnings(result.warning_messages(AnalysisArea.INFO, AnalysisArea.ICON))
         self.security_panel.show_warnings(result.warning_messages(AnalysisArea.SECURITY))
+        self.permissions_panel.show_warnings(result.warning_messages(AnalysisArea.PERMISSIONS))
         self.components_panel.show_warnings(components_warnings)
         self.intents_panel.show_warnings(components_warnings)
         self.menu_bar.set_enabled(self._ANALYSIS_DEPENDENT_ITEMS, True)
