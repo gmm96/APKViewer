@@ -55,10 +55,10 @@ class ComponentsPanel(ttk.Frame):
         self._pills: dict[str, ttk.Radiobutton] = {}
         toolbar = self._table.toolbar  # the table's first line; its buttons are already at the right
         assert toolbar is not None
-        for key in self._pill_labels:
+        for key, value in self._pill_labels.items():
             pill = ttk.Radiobutton(
                 toolbar,
-                text=self._pill_labels[key],
+                text=value,
                 value=key,
                 variable=self._selected,
                 style=_PILL_STYLE,

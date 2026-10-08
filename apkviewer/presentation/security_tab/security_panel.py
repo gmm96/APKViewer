@@ -58,10 +58,10 @@ class SecurityPanel(FormPanel):
 
     def _render_schemes(self, present: tuple[str, ...]) -> None:
         frame = self.add_section("Signature schemes").frame
-        frame.columnconfigure(0, weight=1, uniform="col")
-        frame.columnconfigure(1, weight=1, uniform="col")
-        frame.columnconfigure(2, weight=1, uniform="col")
-        frame.columnconfigure(3, weight=2, uniform="col")
+        frame.columnconfigure(0, weight=2)
+        frame.columnconfigure(1, weight=1)
+        frame.columnconfigure(2, weight=1)
+        frame.columnconfigure(3, weight=3)
         for column, title in enumerate(("Scheme", "Status", "Android", "Note")):
             self.create_muted_label(frame, title).grid(
                 row=0, column=column, sticky="w", padx=10, pady=(6, 4)
@@ -84,7 +84,7 @@ class SecurityPanel(FormPanel):
             return "Can't be checked", "muted"
         return ("Signed", "success") if scheme in present else ("Not signed", "neutral")
 
-    # --- Certificates ----------------------------------------------------------------------------
+    # --- Certificates ---------------------------------------------------------------------------------
 
     def _render_certificate(
         self, number: int, total: int, certificate: Certificate, now: datetime
@@ -120,7 +120,9 @@ class SecurityPanel(FormPanel):
 
     @staticmethod
     def _add_group(
-        section: FormSection, title: str, rows: tuple[tuple[str, str | None], ...]
+        section: FormSection,
+        title: str,
+        rows: tuple[tuple[str, str | None], ...]
     ) -> None:
         readable = [(label, value) for label, value in rows if value]
         if not readable:
