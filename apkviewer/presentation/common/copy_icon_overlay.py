@@ -37,7 +37,7 @@ class CopyIconOverlay:
 
         parent = target.master  # a place() target must be the master or a child of it
         if background is None:
-            self._icon: tk.Misc = ttk.Label(parent, image=icons.copy, cursor="hand2")
+            self._icon: tk.Label | ttk.Label = ttk.Label(parent, image=icons.copy, cursor="hand2")
         else:
             self._icon = tk.Label(
                 parent, image=icons.copy, cursor="hand2",
