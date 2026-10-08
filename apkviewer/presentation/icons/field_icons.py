@@ -15,7 +15,7 @@ from apkviewer.presentation.icons.icon_loader import IconLoader
 COPY_ICON_PATH: str = "assets/icons/outline/copy_content.png"
 ICON_SIZE: tuple[int, int] = (16, 16)
 ENTRY_STYLE: str = "IconEntry.TEntry"
-ENTRY_ICON_AREA: int = 30
+ENTRY_ICON_AREA: int = 30  # pixels kept free at the right end of the field's text area
 
 
 class FieldIcons:

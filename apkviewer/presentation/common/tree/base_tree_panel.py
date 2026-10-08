@@ -1,9 +1,12 @@
 """
-Starting point of every tree of the app. It owns what all of them share:
-the Treeview with auto-hiding scrollbars, header-click sorting with arrow
-indicators, a live text filter, open/closed state preservation and an
-optional maximum height (in rows) after which the tree scrolls instead of
-growing.
+Starting point of every tree and table of the app. It owns what all of them
+share: the Treeview with auto-hiding scrollbars (vertical and horizontal,
+each shown only on overflow), proportional column widths, header-click
+sorting with arrow indicators, the filter line (filter field, item counter
+and optional expand / collapse buttons), an optional row above it for extra
+widgets (e.g. category pills), the "nothing to show" message,
+open/closed state preservation and an optional maximum height (in rows)
+after which the tree scrolls instead of growing.
 
 Subclasses only say how their nodes are ordered, filtered and inserted.
 
@@ -30,6 +33,7 @@ NodeT = TypeVar("NodeT")
 
 ARROW_UP: str = "⏶"
 ARROW_DOWN: str = "⏷"
+_WIDTH_MARGIN: int = 4  # keeps rounding / borders from showing a scrollbar for a few pixels
 
 
 class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
@@ -45,8 +49,18 @@ class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
         max_visible_rows: int | None = None,
         min_visible_rows: int = 3,
         filter_on_top: bool = False,
+        toolbar_row: bool = False,
+        expand_buttons: bool = False,
+        item_noun: str = "items",
+        empty_text: str = "Nothing to show.",
     ) -> None:
-        """`max_visible_rows=None` makes the tree fill the space it is given."""
+        """
+        `max_visible_rows=None` makes the tree fill the space it is given.
+        `toolbar_row`: add a line above the filter (`self.toolbar`) for extra widgets on its
+        left; the expand / collapse buttons then go at its right.
+        `expand_buttons`: show "Collapse all" / "Expand all" (in the toolbar row if there is
+        one, otherwise at the right end of the filter line).
+        """
         super().__init__(parent)
         self._columns: tuple[TreeColumn, ...] = tuple(columns)
         self._max_rows: int | None = max_visible_rows
@@ -54,17 +68,29 @@ class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
         self._root_node: NodeT = self._empty_root()
         self._node_states: dict[str, bool] = {}
         self._filtering: bool = False
-        self._tree_row: int = 1 if filter_on_top else 0
-        self._filter_row: int = 0 if filter_on_top else 2
+        self._item_noun: str = item_noun
+        self._empty_text: str = empty_text
+        self._total_items: int = 0
+        top_rows = (1 if toolbar_row else 0) + (1 if filter_on_top else 0)
+        self._tree_row: int = top_rows
+        self._filter_row: int = (1 if toolbar_row else 0) if filter_on_top else top_rows + 2
+        self.toolbar: ttk.Frame | None = None
 
         self._field_icons: FieldIcons = FieldIcons(IconLoader(), palette)
 
         self.rowconfigure(self._tree_row, weight=1)
         self.columnconfigure(0, weight=1)
         self._build_tree(palette)
-        self._build_filter_bar()
+        if toolbar_row:
+            self.toolbar = ttk.Frame(self)
+            self.toolbar.grid(row=0, column=0, columnspan=2, sticky="ew", padx=5, pady=(5, 0))
+            if expand_buttons:
+                self._pack_expand_buttons(self.toolbar)
+        self._build_filter_bar(expand_buttons and not toolbar_row)
+        self._empty_label: ttk.Label = ttk.Label(self, text=empty_text)
         self._update_heading_labels()
         self._fit_height()
+        self._after_rebuild(self._root_node)
 
     # --- Hooks ---------------------------------------------------------------
 
@@ -105,13 +131,34 @@ class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
     def _configure_tags(self, palette: ThemePalette) -> None:
         """Configure the Treeview tags that depend on the palette."""
 
+    def _item_count(self, node: NodeT) -> int:
+        """How many items the counter counts in this (sub)tree. By default, its top-level rows."""
+        return len(self._children_of(node))
+
+    def _is_narrowed(self) -> bool:
+        """Whether something (the filter, a category...) is hiding rows."""
+        return self._filtering
+
     def _after_rebuild(self, displayed_root: NodeT) -> None:
-        """Called every time the visible rows were rebuilt (counters, empty states...)."""
+        """Called every time the visible rows were rebuilt: updates the counter and the empty message."""
+        shown = self._item_count(displayed_root)
+        counter = f"{shown} {self._item_noun}"
+        if shown != self._total_items:
+            counter = f"{shown} of {self._total_items} {self._item_noun}"
+        self._count_label.configure(text=counter)
+
+        if shown:
+            self._empty_label.place_forget()
+            return
+        narrowed = self._total_items and self._is_narrowed()
+        self._empty_label.configure(text="No matches." if narrowed else self._empty_text)
+        self._empty_label.place(in_=self.tree, relx=0.5, rely=0.5, anchor="center")
 
     # --- Public API ------------------------------------------------------------
 
     def show(self, root: NodeT) -> None:
         self._root_node = root
+        self._total_items = self._item_count(root)
         self._node_states.clear()
         self._filtering = False
         self.filter_entry.delete(0, tk.END)
@@ -157,7 +204,7 @@ class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
                 column.id,
                 width=column.width,
                 minwidth=column.min_width,
-                stretch=column.stretch,
+                stretch=column.stretch and column.weight is None,
                 anchor="w",
             )
             self.tree.heading(column.id, anchor="w", command=partial(self._on_heading_click, column.id))
@@ -169,6 +216,8 @@ class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
         self.tree.configure(yscrollcommand=v_auto.scroll_command, xscrollcommand=h_auto.scroll_command)
         self.tree.grid(row=self._tree_row, column=0, sticky="nsew")
 
+        if any(column.weight for column in self._columns):
+            self.tree.bind("<Configure>", self._apply_column_weights, add="+")
         self.tree.bind("<<TreeviewOpen>>", self._on_toggle, add="+")
         self.tree.bind("<<TreeviewClose>>", self._on_toggle, add="+")
         for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
@@ -180,13 +229,24 @@ class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
         ttk.Style().configure("Treeview.Heading", padding=(8, 6))
         self._configure_tags(palette)
 
-    def _build_filter_bar(self) -> None:
+    def _pack_expand_buttons(self, parent: ttk.Frame) -> None:
+        """"Collapse all   Expand all" at the right end of `parent`."""
+        ttk.Button(parent, text="Expand all", command=self.expand_all, takefocus=False).pack(side=tk.RIGHT)
+        ttk.Button(parent, text="Collapse all", command=self.collapse_all, takefocus=False).pack(
+            side=tk.RIGHT, padx=(0, 4)
+        )
+
+    def _build_filter_bar(self, with_buttons: bool = False) -> None:
+        """Left to right: "Filter:", the field (takes the free space), the counter, the buttons."""
         filter_frame = ttk.Frame(self)
         filter_frame.grid(row=self._filter_row, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
-        # Public: other widgets (e.g. category pills) can be packed into this bar.
         self.filter_bar: ttk.Frame = filter_frame
         self.filter_label: ttk.Label = ttk.Label(filter_frame, text="Filter:")
         self.filter_label.pack(side=tk.LEFT)
+        if with_buttons:
+            self._pack_expand_buttons(filter_frame)
+        self._count_label: ttk.Label = ttk.Label(filter_frame, text="")
+        self._count_label.pack(side=tk.RIGHT, padx=(5, 8))
         self.filter_entry: ClearableEntry = ClearableEntry(
             filter_frame, self._field_icons, on_clear=self._apply_filter
         )
@@ -239,7 +299,35 @@ class BaseTreePanel(ttk.Frame, Generic[NodeT], ABC):
     def _is_item_open(self, iid: str) -> bool:
         return bool(self.getboolean(self.tree.item(iid, "open")))
 
-    # --- Height limit / scrolling ---------------------------------------------------------
+    # --- Column widths / height limit / scrolling ---------------------------------------
+
+    def _apply_column_weights(self, _event: tk.Event | None = None) -> None:
+        """
+        Share the width the fixed columns leave among the weighted ones, in proportion to their
+        weights. A column that would end up under its minimum width gets the minimum and the
+        rest share what is left; if even the minimums don't fit, the table overflows and the
+        horizontal scrollbar appears.
+        """
+        available = self.tree.winfo_width() - _WIDTH_MARGIN
+        pending = [column for column in self._columns if column.weight]
+        if available <= 0 or not pending:
+            return
+        remaining = available - sum(column.width for column in self._columns if not column.weight)
+        widths: dict[str, int] = {}
+        while pending:
+            total_weight = sum(column.weight or 0 for column in pending)
+            too_narrow = next(
+                (c for c in pending if remaining * (c.weight or 0) / total_weight < c.min_width), None
+            )
+            if too_narrow is None:
+                for column in pending:
+                    widths[column.id] = int(remaining * (column.weight or 0) / total_weight)
+                break
+            widths[too_narrow.id] = too_narrow.min_width
+            remaining -= too_narrow.min_width
+            pending.remove(too_narrow)
+        for column_id, width in widths.items():
+            self.tree.column(column_id, width=width)
 
     def _on_toggle(self, _event: tk.Event) -> None:
         # The event fires before the item's state changes: measure afterwards.

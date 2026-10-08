@@ -64,8 +64,7 @@ class PermissionOrigin(Enum):
 class Permission:
     name: str
     protection: str | None = None  # None when nothing defines it
-    label: str | None = None
-    description: str | None = None
+    label: str | None = None       # short summary of what it allows
     max_sdk: str | None = None     # maxSdkVersion of the <uses-permission>
     origin: PermissionOrigin = PermissionOrigin.REQUESTED
 

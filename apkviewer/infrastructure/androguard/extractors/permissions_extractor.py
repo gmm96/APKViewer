@@ -60,8 +60,7 @@ class PermissionsExtractor:
                 permission = Permission(
                     name=name,
                     protection=parse_protection_level(entry.get("protectionLevel")),
-                    label=self._clean(entry.get("label")),
-                    description=self._clean(entry.get("description")),
+                    label=self._clean(entry.get("label")) or self._clean(entry.get("description")),
                     max_sdk=max_sdk,
                 )
                 (app_ops if permission.is_app_op else framework).append(permission)
@@ -100,8 +99,8 @@ class PermissionsExtractor:
             declared[name] = Permission(
                 name=name,
                 protection=parse_protection_level(node.get(f"{ANDROID_NS}protectionLevel")),
-                label=self._text(node.get(f"{ANDROID_NS}label"), resolver),
-                description=self._text(node.get(f"{ANDROID_NS}description"), resolver),
+                label=self._text(node.get(f"{ANDROID_NS}label"), resolver)
+                or self._text(node.get(f"{ANDROID_NS}description"), resolver),
                 origin=PermissionOrigin.DECLARED,
             )
         return declared
@@ -123,6 +122,5 @@ class PermissionsExtractor:
     @staticmethod
     def _with_origin(permission: Permission, max_sdk: str | None, origin: PermissionOrigin) -> Permission:
         return Permission(
-            permission.name, permission.protection, permission.label, permission.description,
-            max_sdk, origin,
+            permission.name, permission.protection, permission.label, max_sdk, origin,
         )

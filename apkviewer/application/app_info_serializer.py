@@ -110,8 +110,6 @@ class AppInfoSerializer:
             lines.append(f"Max SDK: {permission.max_sdk}")
         if permission.label:
             lines.append(f"Summary: {permission.label}")
-        if permission.description:
-            lines.append(f"Description: {permission.description}")
         return "\n".join(lines)
 
     def _third_party(self, info: ThirdPartyInfo) -> str:

@@ -7,4 +7,15 @@
         "--explicit-package-bases",
         "--ignore-missing-imports"
     ],
+    "terminal.integrated.profiles.linux": {
+        "Python venv": {
+            "path": "bash",
+            "icon": "python",
+            "overrideName": true,
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && exec bash"
+            ]
+        }
+    },
 }

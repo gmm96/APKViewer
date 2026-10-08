@@ -1,8 +1,10 @@
 """
-"Components" tab: one table with every declared component. A row of pills
-above it restricts the table to one kind (a kind with no components is
-dimmed instead of opening an empty view), and each component expands to
-show its intent filters.
+"Components" tab: one table with every declared component. Above it, a row
+of pills restricts the table to one kind (a kind with no components is
+dimmed instead of opening an empty view) and the table's own header line
+carries the filter, the counter and the expand / collapse buttons, exactly
+as in the Files tab. Each component expands to show its properties and
+intent filters.
 """
 
 import tkinter as tk
@@ -11,8 +13,8 @@ from tkinter import ttk
 from apkviewer.domain.entities.components import DeclaredComponents
 from apkviewer.presentation.appearance.theme_palette import ThemePalette
 from apkviewer.presentation.common.tree.record_table_panel import RecordTablePanel
-from apkviewer.presentation.common.warning_banner import WarningBanner
 from apkviewer.presentation.common.tree.tree_column import TreeColumn
+from apkviewer.presentation.common.warning_banner import WarningBanner
 from apkviewer.presentation.components_tab.component_tree_builder import ComponentTreeBuilder
 
 _COLUMNS: tuple[TreeColumn, ...] = (
@@ -36,26 +38,26 @@ class ComponentsPanel(ttk.Frame):
         super().__init__(parent)
         self._tree_builder: ComponentTreeBuilder = tree_builder or ComponentTreeBuilder()
 
-        # First line: category pills (left) and expand / collapse buttons (right).
-        # The table below carries the second line itself: filter and counter.
-        self._toolbar: ttk.Frame = ttk.Frame(self)
-        self._toolbar.pack(fill=tk.X, padx=5, pady=(5, 0))
         self._table: RecordTablePanel = RecordTablePanel(
             self,
             palette,
             _COLUMNS,
             item_noun="components",
             empty_text="No components declared.",
+            toolbar_row=True,
+            expand_buttons=True,
         )
-        self._table.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
-        self._banner: WarningBanner = WarningBanner(self, palette, before=self._toolbar)
+        self._table.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self._banner: WarningBanner = WarningBanner(self, palette, before=self._table)
 
         self._selected: tk.StringVar = tk.StringVar(value=_ALL)
         self._pill_labels: dict[str, str] = {_ALL: "All", **dict(ComponentTreeBuilder.GROUPS)}
         self._pills: dict[str, ttk.Radiobutton] = {}
+        toolbar = self._table.toolbar  # the table's first line; its buttons are already at the right
+        assert toolbar is not None
         for key in self._pill_labels:
             pill = ttk.Radiobutton(
-                self._toolbar,
+                toolbar,
                 text=self._pill_labels[key],
                 value=key,
                 variable=self._selected,
@@ -65,12 +67,6 @@ class ComponentsPanel(ttk.Frame):
             )
             pill.pack(side=tk.LEFT, padx=(0, 4))
             self._pills[key] = pill
-        ttk.Button(
-            self._toolbar, text="Expand all", command=self._table.expand_all, takefocus=False
-        ).pack(side=tk.RIGHT)
-        ttk.Button(
-            self._toolbar, text="Collapse all", command=self._table.collapse_all, takefocus=False
-        ).pack(side=tk.RIGHT, padx=(0, 4))
         self._apply_pill_style(palette)
         self._update_pills({})
 

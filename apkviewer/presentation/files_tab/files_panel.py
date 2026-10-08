@@ -1,8 +1,10 @@
 """
 "Files" tab: hierarchical view of the APK's internal zip entries. It is the
-files flavour of BaseTreePanel (which provides the filter, header sorting
-and scrolling) plus a right-click context menu for Open / Open with / Copy /
-Extract to / Details.
+files flavour of BaseTreePanel (which provides the filter line with counter
+and expand / collapse buttons, header sorting and scrolling, exactly as the
+Components tab has them) plus a right-click context menu for Open / Open with /
+Copy / Extract to / Details. Everything starts collapsed; filtering opens the
+folders that hold matches.
 """
 
 import tkinter as tk
@@ -45,6 +47,8 @@ _DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 
 
 class FilesPanel(BaseTreePanel[FileNode]):
+    _expand_on_filter = True
+
     def __init__(
         self,
         parent: tk.Misc,
@@ -79,9 +83,15 @@ class FilesPanel(BaseTreePanel[FileNode]):
         self._icon_rsa: ImageTk.PhotoImage = self._icon_loader.load_icon(
             "assets/icons/color/rsa.png", padding_left=4, padding_right=8
         )
-
-        super().__init__(parent, palette, _COLUMNS)  # fills the available space (no row limit)
-
+        super().__init__(
+            parent,
+            palette,
+            _COLUMNS,  # fills the available space (no row limit)
+            filter_on_top=True,
+            expand_buttons=True,
+            item_noun="files",
+            empty_text="This APK contains no files.",
+        )
         self._context_menu: FilesContextMenu = FilesContextMenu(
             self.tree,
             entry_previewer=entry_previewer,
@@ -132,7 +142,11 @@ class FilesPanel(BaseTreePanel[FileNode]):
         return node.path
 
     def _default_open(self, node: FileNode) -> bool:
-        return True
+        return False
+
+    def _item_count(self, node: FileNode) -> int:
+        """The counter counts files, not folders."""
+        return sum(1 if child.is_file else self._item_count(child) for child in node.children.values())
 
     def _sort_state(self) -> tuple[str, bool]:
         column = next(col for col, key in _COLUMN_SORT_KEYS.items() if key == self._sorter.key)

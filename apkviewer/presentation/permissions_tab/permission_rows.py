@@ -30,9 +30,10 @@ class PermissionRowBuilder:
         cells = [permission.name, permission.type_text]
         if with_origin:
             cells.append(permission.origin.value)
-        cells += [
-            permission.max_sdk or "",
-            permission.label or "",
-            permission.description or "",
-        ]
+        cells += [permission.max_sdk or "", PermissionRowBuilder._summary(permission)]
         return tuple(cells)
+
+    @staticmethod
+    def _summary(permission: Permission) -> str:
+        label = permission.label or ""
+        return label[:1].upper() + label[1:]  # capitalize the first letter only

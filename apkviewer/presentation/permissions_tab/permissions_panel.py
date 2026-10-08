@@ -22,15 +22,16 @@ from apkviewer.presentation.common.tree.tree_column import TreeColumn
 from apkviewer.presentation.common.warning_banner import WarningBanner
 from apkviewer.presentation.permissions_tab.permission_rows import DANGEROUS_STYLE, PermissionRowBuilder
 
-_NAME = TreeColumn("#0", "Permission", width=330, min_width=200)
-_TYPE = TreeColumn("type", "Type", width=230, min_width=110)
-_ORIGIN = TreeColumn("origin", "Origin", width=170, min_width=110)
-_MAX_SDK = TreeColumn("max_sdk", "Max SDK", width=75, min_width=60)
-_SUMMARY = TreeColumn("summary", "Summary", width=300, min_width=120)
-_DESCRIPTION = TreeColumn("description", "Description", width=600, min_width=160, stretch=True)
+# The permission name gets twice the width of every other column (weights 2 and 1). If the
+# window is too narrow for the minimum widths, the table scrolls horizontally instead.
+_NAME = TreeColumn("#0", "Permission", min_width=280, weight=2)
+_TYPE = TreeColumn("type", "Type", min_width=150, weight=1)
+_ORIGIN = TreeColumn("origin", "Origin", min_width=150, weight=1)
+_MAX_SDK = TreeColumn("max_sdk", "Max SDK", min_width=70, weight=1)
+_SUMMARY = TreeColumn("summary", "Summary", min_width=220, weight=1)
 
-_STANDARD_COLUMNS: tuple[TreeColumn, ...] = (_NAME, _TYPE, _MAX_SDK, _SUMMARY, _DESCRIPTION)
-_CUSTOM_COLUMNS: tuple[TreeColumn, ...] = (_NAME, _TYPE, _ORIGIN, _MAX_SDK, _SUMMARY, _DESCRIPTION)
+_STANDARD_COLUMNS: tuple[TreeColumn, ...] = (_NAME, _TYPE, _MAX_SDK, _SUMMARY)
+_CUSTOM_COLUMNS: tuple[TreeColumn, ...] = (_NAME, _TYPE, _ORIGIN, _MAX_SDK, _SUMMARY)
 
 _MIN_HEIGHT_WITH_ROWS: int = 170
 _MIN_HEIGHT_EMPTY: int = 95

@@ -7,7 +7,6 @@ for rows that have nested rows, an expander showing the detail.
 import tkinter as tk
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
-from tkinter import ttk
 
 from apkviewer.presentation.appearance.theme_palette import ThemePalette
 from apkviewer.presentation.common.tree.base_tree_panel import BaseTreePanel
@@ -30,6 +29,8 @@ class RecordTablePanel(BaseTreePanel[RecordNode]):
         empty_text: str = "Nothing to show.",
         filter_on_top: bool = True,
         row_styles: Mapping[str, Callable[[ThemePalette], str]] | None = None,
+        toolbar_row: bool = False,
+        expand_buttons: bool = False,
     ) -> None:
         """`row_styles`: style name -> function giving its text color from the palette."""
         self._row_styles: dict[str, Callable[[ThemePalette], str]] = dict(row_styles or {})
@@ -37,14 +38,10 @@ class RecordTablePanel(BaseTreePanel[RecordNode]):
         self._reverse: bool = False
         self._category: str | None = None
         self._column_ids: tuple[str, ...] = tuple(column.id for column in columns)
-        self._item_noun: str = item_noun
-        self._empty_text: str = empty_text
-        super().__init__(parent, palette, columns, filter_on_top=filter_on_top)
-
-        self._count_label: ttk.Label = ttk.Label(self.filter_bar, text="")
-        self._count_label.pack(side=tk.RIGHT, padx=(5, 0), before=self.filter_entry)
-        self._empty_label: ttk.Label = ttk.Label(self, text=empty_text)
-        self._after_rebuild(self._root_node)
+        super().__init__(
+            parent, palette, columns, filter_on_top=filter_on_top, toolbar_row=toolbar_row,
+            expand_buttons=expand_buttons, item_noun=item_noun, empty_text=empty_text,
+        )
 
     # --- Public API ------------------------------------------------------------
 
@@ -108,17 +105,5 @@ class RecordTablePanel(BaseTreePanel[RecordNode]):
         for style, color_of in self._row_styles.items():
             self.tree.tag_configure(style, foreground=color_of(palette))
 
-    def _after_rebuild(self, displayed_root: RecordNode) -> None:
-        shown = len(displayed_root.children)
-        total = len(self._root_node.children)
-        counter = f"{shown} {self._item_noun}"
-        if shown != total:
-            counter = f"{shown} of {total} {self._item_noun}"
-        self._count_label.configure(text=counter)
-
-        if shown:
-            self._empty_label.place_forget()
-            return
-        narrowed = self._filtering or self._category is not None
-        self._empty_label.configure(text="No matches." if total and narrowed else self._empty_text)
-        self._empty_label.place(in_=self.tree, relx=0.5, rely=0.5, anchor="center")
+    def _is_narrowed(self) -> bool:
+        return self._filtering or self._category is not None
