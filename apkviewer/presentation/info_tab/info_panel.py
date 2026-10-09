@@ -39,20 +39,21 @@ class InfoPanel(FormPanel):
         embedded_content: EmbeddedContent,
     ) -> None:
         self.clear()
-
-        section = self.add_section("Application")
-        section.add_entry("App Name", application.app_name)
-        section.add_entry("Package Name", application.package_name)
-        section.add_entry("Version Name", application.version_name)
-        section.add_entry("Version Code", application.version_code)
-        section.add_entry("Min SDK", application.min_sdk)
-        section.add_entry("Target SDK", application.target_sdk)
+        app_section = self.add_section("Application")
+        app_section.add_entry("App Name", application.app_name)
+        app_section.add_entry("Package Name", application.package_name)
+        app_section.add_entry("Version Name", application.version_name)
+        app_section.add_entry("Version Code", application.version_code)
+        app_section.add_entry("Min SDK", application.min_sdk)
+        app_section.add_entry("Target SDK", application.target_sdk)
         if application.max_sdk:
-            section.add_entry("Max SDK", application.max_sdk)
-        section.add_entry("File Name", application.file_name or "Unknown")
-        section.add_entry("File Path", application.file_path or "Unknown")
-        section.add_entry("File Size", self._format_size(application.file_size))
-        section.add_entry("Last Modified", self._format_date(application))
+            app_section.add_entry("Max SDK", application.max_sdk)
+
+        file_section = self.add_section("File")
+        file_section.add_entry("File Name", application.file_name or "Unknown")
+        file_section.add_entry("File Path", application.file_path or "Unknown")
+        file_section.add_entry("File Size", self._format_size(application.file_size))
+        file_section.add_entry("Last Modified", self._format_date(application))
 
         section = self.add_section("Configuration")
         section.add_entry(
